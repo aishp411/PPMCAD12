@@ -1,0 +1,112 @@
+DevOps Key Areas:
+-----------------
+
+1.) CI/CD (Continuous Integration & Continuous Delivery/Deployment)
+2.) Infrastructure Automation – Terraform, Ansible
+3.) Cloud Administration – AWS, Azure, GCP
+4.) Containers & Kubernetes
+5.) Monitoring & Logging
+6.) Automation with Python / Bash / PowerShell
+7.) System Administration – Linux & Windows
+
+
+Role Overlaps
+
+Cloud Engineer / Platform Engineer / DevOps Engineer / SRE (Site Reliability Engineer)
+
+Above mentioned skillsets are Overlapping in all of these roles.
+
+Docker vs. Kubernetes:
+----------------------
+
+First, let us recap, What are Containers?
+
+    Containers are lightweight, portable units of software that package:
+    - Application code
+    - Dependencies & libraries
+    - Runtime environment
+
+    They ensure the app runs consistently across environments (dev, test, prod).
+
+    Key advantages:
+    - Isolation (like lightweight VMs, but share the host OS kernel).
+    - Faster startup & smaller footprint than VMs.
+    - Easy to replicate, scale, and deploy.
+
+Now, let us understand Docker:
+    
+    A containerization platform that helps build, package, and run containers.
+
+    Core concepts:
+    - Dockerfile -> Blueprint to build an image.
+    - Image -> Immutable snapshot (app + dependencies).
+    - Container -> Running instance of an image.
+
+What is Kubernetes (K8s) and why it is required?
+
+    A container orchestration platform (created by Google, 2014)
+
+    Solves problems when running containers at scale:
+    - Deploy containers across multiple servers/VMs.
+    - Run multiple replicas for load balancing.
+    - Ensure self-healing & high availability.
+    - Provide networking & service discovery.
+
+    It becomes essential once teams move from "running a few Docker containers" -> to "managing hundreds or thousands in production".
+
+
+Continuous Integration (CI)
+----------------------------
+
+Definition: CI focuses on automating the build, test, scan, and package stages of application development.
+
+Typical CI Pipeline:
+
+1.) Code Checkout stage
+    - Developer commits code -> pipeline triggers in Jenkins/GitHub Actions/GitLab CI using their webhook based triggers
+    - OR Jenkins/GitHub Actions/GitLab CI monitor / Polls the Git repo and branches and detect new commits and triggers the pipelines
+
+2.) Build / Install dependencies stage
+    - For Java: mvn build / install
+    - For NodeJs: npm install / build
+    - For Python: pip install -r requirements.txt
+
+3.) Test
+    - For Python: pytest
+    - For Java: mvn test
+
+4.) Package
+    - For Java: mvn package
+    - For Other languages create artifacts (e.g., .jar, .zip, .tar).
+
+5.) Scan
+    - Static Code Analysis (SonarQube)
+    - Vulnerability Scanning (Trivy)
+    - Code Coverage
+
+6.) Push
+    - Artifact Repositories: Nexus, JFrog Artifactory
+    - Container Registries: DockerHub, ECR, ACR
+
+Note: These are just references, actual command will / may vary as per the project requirements
+
+Continuous Delivery / Deployment (CD)
+-------------------------------------
+
+Continuous Delivery: A software engineering practice where code changes prepared for release after the CI phase requires a manual trigger for deployment to ensure controlled rollout
+
+Continuous Deployment: An extension of CD where every code change that passes the CI phase is automatically deployed without human intervention, enabling rapid and frequent releases
+
+Jenkins:
+--------
+
+- A widely used CI/CD tool that executes pipelines.
+- Can also run ad-hoc automations and scripts.
+
+
+Poll SCM vs. Webhooks:
+----------------------
+
+Poll SCM -> Jenkins checks GitHub periodically (e.g., every 5 min) for new commits.
+
+Webhook -> GitHub instantly notifies Jenkins on new commits (preferred approach).
