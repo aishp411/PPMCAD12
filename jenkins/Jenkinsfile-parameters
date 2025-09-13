@@ -1,0 +1,37 @@
+pipeline {
+    // 1. Use the agent configured
+    agent { label 'linux' }
+
+    // 2. Define the parameters fhere
+    parameters {
+        booleanParam(name: 'RUN_BUILD', defaultValue: true, description: 'Check this to run npm build.')
+    }
+
+    stages {
+        stage('Checkout Code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/aryanm12/TravelMemory.git'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                // Run npm install inside the 'backend' folder
+                dir('backend') {
+                    sh 'npm install'
+                }
+            }
+        }
+
+        stage('Run Build') {
+            // 3. A conditional stage based on the parameter
+            when { expression { return params.RUN_BUILD } }
+            steps {
+                dir('backend') {
+                    sh 'npm run build'
+                }
+            }
+        }
+    }
+    
+}

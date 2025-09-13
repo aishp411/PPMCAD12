@@ -1,0 +1,21 @@
+pipeline {
+    agent { label 'linux' }
+    stages {
+        stage('Build') {
+            steps {
+                echo 'Building the application on EC2 agent...'
+            }
+        }
+        stage('Test') {
+            steps {
+                echo 'Running tests on EC2 agent...'
+            }
+        }
+        stage('Deploy') {
+            steps {
+                echo 'Deploying from EC2 agent to server...'
+            }
+        }
+    }
+}
+

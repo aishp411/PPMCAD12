@@ -1,0 +1,41 @@
+pipeline {
+    agent any
+    
+    stages {
+        // This stage will ONLY run for builds on the 'main' branch
+        stage('Deploy to Production') {
+            when { branch 'main' } 
+            steps {
+                echo 'Deploying to our production servers...'
+                // Add deployment scripts here
+            }
+        }
+        // This stage will ONLY run if the 'RUN_TESTS' parameter is checked
+        stage('Run Expensive Integration Tests') {
+            when { expression { return params.RUN_TESTS == true } }
+            steps {
+                echo 'Running tests that take a long time...'
+            }
+        }
+    }
+    post {
+        // This block will ALWAYS run
+        always {
+            echo "Build finished. Cleaning up workspace..."
+            // Example: delete temporary files or log out
+            sh 'docker logout'
+        }
+
+        // This block will ONLY run on SUCCESS
+        success {
+            echo "Build Passed! Notifying the team via Slack."
+            // Example: slackSend message: "Build ${env.JOB_NAME} #${env.BUILD_NUMBER} was successful!"
+        }
+
+        // This block will ONLY run on FAILURE
+        failure {
+            echo "Build Failed! Alerting the on-call engineer."
+            // Example: mail to: 'on-call@example.com', subject: "Build Failed: ${env.JOB_NAME}"
+        }
+    }
+}

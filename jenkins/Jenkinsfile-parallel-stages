@@ -1,0 +1,19 @@
+pipeline {
+    agent any
+    stages {
+        stage('Test Suite') {
+            parallel {
+                stage('Unit Tests') { 
+                    steps {
+                        sh 'npm test'
+                    }
+                }
+                stage('Linting') {
+                    steps {
+                        sh 'npm run lint'
+                    }
+                }
+            }
+        }
+    }
+}
