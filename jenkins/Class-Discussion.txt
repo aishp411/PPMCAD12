@@ -110,3 +110,94 @@ Poll SCM vs. Webhooks:
 Poll SCM -> Jenkins checks GitHub periodically (e.g., every 5 min) for new commits.
 
 Webhook -> GitHub instantly notifies Jenkins on new commits (preferred approach).
+
+-----
+
+Jenkins Real World Work Items:
+
+1.) Jenkins Controller and Agent setup
+
+2.) Plugin installations
+
+
+3.) Taking regular backups
+How to backup and restore Jenkins Controller / Master
+
+BackUp Steps:
+- Take the backup of /var/lib/jenkins folder
+
+Restore Steps:
+- Install Jenkins
+- Replace the content of /var/lib/jenkins from the backup
+- Restart Jenkins: systemctl restart jenkins
+
+4.) Creating Freestyle jobs for general Automation
+
+5.) Creating Pipelines for CI/CD 
+    - Integrate the pipeline with the webhook
+    - The pipeline are attached with a Agent
+    - No secrets should be in plain text in the Pipeline
+    - Make use of the environment variables
+
+6.) Managing and Runnning the pipelines
+    - Issues w.r.t Agent not running: Check the Agent logs, fix the issue and restart
+    - Pipeline failures: Check each and every line in the Console Output, find the issue, resolve the issue and re-run
+
+----
+
+We setup workflows in the CI/CD pipelines
+-----------------------------------------
+
+What are workflows?
+Step-by-step automated actions that take code -> transform -> deploy -> validate.
+
+Gather these requirements before developing the Jenkins Jobs:
+
+Typically ask these questions:
+
+    CI Flow:
+
+    1.) Which Repos to Clone
+    2.) How to Install Dependencies / Build the Code (If Required)
+    3.) How to Run Unit Tests
+    4.) How to do Code Quality Check (If Required)
+    5.) How to Package the Code
+    6.) Push to Artifact Repo / Registry (DevOps team / Engineer can suggest here)
+
+
+    CD Flow (DevOps Team / Engineer can suggest this entire flow):
+
+    Traditional Server:
+    1.) SSH into servers
+    2.) Go to the folder
+    3.) Download package -> extract -> replace old code
+    4.) Restart service:
+
+    Kubernetes:
+    1.) Update image in manifest file
+    2.) Apply latest deployment
+
+
+    Regression / Automation Suite:
+    1.) Keep regression in a separate Jenkins job
+    2.) The regression suite should trigger only when there is a commit in "integration" branch
+
+
+How many Jenkinsfile should I have?
+
+    -- There is no defined / standard answer to it
+    -- Minimize the number of Jenkinsfiles in repo.
+    -- Typical pattern:
+        Jenkinsfile.ci -> Build, Test, Package, Push artifact.
+        Jenkinsfile.cd -> Deploy to environment (with parameter: dev/qa/uat/prod).
+    -- Repo Structure Considerations:
+        Microservice repo (1 service) -> 1 CI + 1–2 CD pipelines.
+        Monolith repo (10+ modules) -> multiple CI pipelines + multiple CD pipelines
+
+How do I finalize that what is an optimized way to create a Jenkinsfile/s for my product / project?
+
+-- Always 1st brainstorm on the extected outcome
+    - On each dev commit, I should be able to build/ install/ run tests on it
+    - On all the commit on my "xyz" branch or all the merges to my "xyz" branch, build/ install/ run tests and deploy the code in "dev" env
+    - Once everything is merged on "qa" branch, run the regression test after deploying my codebase to qa env
+    - Once  everything is merged on "master" branch, deploy on production env
