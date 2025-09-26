@@ -2,20 +2,81 @@
 Kubernetes Traning Program
 ---------------------------
 
-Pre-Req:
---------
-
+Virtual Machine vs Container
+----------------------------
 
 Virtual Machine: 
-- Hardware level virtualization - Hypervisor (e.g: Microsoft Hyper-V, Oracle VirtualBox, VMware Workstation)
+- Hardware level virtualization - uses a Hypervisor (e.g: Microsoft Hyper-V, Oracle VirtualBox, VMware Workstation)
 - Digital replica of a physical machine. Partitions the physical hardware into multiple environments
-- Takes minutes to boot up
+- Bootup time: minutes.
 
 Container: 
-- OS level virtualization - Container Runtime (e.g: Dockerd, containerd, CRI-O, Podman)
-- Software code package containing an application’s code, its libraries, and other dependencies that make up the application running environment.
-- Bootup time is in seconds
+- OS level virtualization - uses a Container Runtime (e.g: Dockerd, containerd, CRI-O, Podman)
+- A software code package containing application code, libraries, and dependencies required to run the app.
+- Bootup time: seconds.
 
+Fact: Containers became popular in 2013 when Docker was introduced.
+
+Biggest Difference Between VMs and Containers
+---------------------------------------------
+
+Virtual Machine Example
+- Host machine: Windows OS
+- Enable Hyper-V -> You can create Linux VMs on top of it
+
+Container Example
+- Host machine: Linux OS
+- Can you create a Windows container on top of it? No.
+- Containers must match the underlying host OS type.
+
+Interview Question: How do you run Linux Containers on Windows Laptop using Docker Desktop?
+-------------------------------------------------------------------------------------------
+
+There are 2 options but in both of them, Docker Desktop runs a Linux OS in the background to run the Linux Docker container on it:
+
+- Option 1: Docker Desktop uses Hyper-V to provision a Linux VM in the background. Linux containers run inside this VM.
+- Option 2: Docker Desktop can also integrate natively with WSL2, which runs a lightweight Linux kernel in the background.
+
+
+Additonal Question discussed during the session:
+------------------------------------------------
+
+1.) Developer Use Cases
+
+Case 1: Developer/DevOps with Windows Laptop
+  Needs to test or work with Linux containers.
+  Install Docker Desktop with WSL2 -> allows seamless Linux container usage.
+
+Case 2: Developer/DevOps with Linux Laptop (rare, <1%)
+  Needs to test or work with Windows containers.
+  Requires provisioning Windows VMs/servers.
+
+
+2.) Production Deployment Scenarios
+------------------------------------
+
+Linux Containers: Always run on Linux VMs/servers.
+
+Windows Containers: Always run on Windows VMs/servers.
+
+
+Most Important Benefit of running Containers
+---------------------------------------------
+
+Package your executable code with dependencies, runtime, and OS libraries -> portable across any environment.
+
+Expanded view:
+- Consistency Across Environments:
+  - Traditionally, applications often worked on a developer's laptop but failed in testing or production because of missing libraries, different OS versions, or conflicting dependencies ("It works on my machine" problem).
+
+  - Containers eliminate this by packaging the entire runtime environment (app code + dependencies + binaries + system tools + OS libraries) inside the container image.
+
+  - No matter where you run it (developer laptop, CI/CD pipeline, on-prem server, or cloud provider), the application behaves the same.
+
+- Portability:
+  - A container image is generally lightweight excluding a few windows conatiners, standardized, and can run anywhere there's a container runtime (Docker, containerd, CRI-O).
+
+  - This makes applications cloud-agnostic -> the same image runs on AWS, Azure, GCP, or on bare-metal servers.
 
 
 -------------
@@ -53,6 +114,55 @@ Distributes load across servers
 
 Just like modern ports need automation to handle thousands of containers efficiently, Kubernetes automates container management at scale
 
+
+
+Kubernetes Use Cases discussed during the session:
+---------------------------------------------------
+
+1.) Scaling Scenario (e.g., An App running in Production on Kubernetes):
+  - Kubernetes Cluster setup: 1 Control Plane + 3 Worker Nodes.
+  - Initially: 10 containers running, Kubernetes based auto-scaling enabled.
+  - Traffic spike
+    - How Kubernetes Responds:
+      - The container (Pods in Kubernetes env) will scale to 20 using its native Horizontal Pod Auto-scalar (still on 3 worker nodes).
+  - The traffic still increasing but the Worker nodes max out CPU/memory whereas we need 40 containers.
+    - How Kubernetes responds:
+        - On AWS/EKS: Auto-scaling group provisions new worker nodes automatically.
+        - On self-managed cluster: Admin manually adds worker nodes.
+
+2.) Resource-heavy container scenario:
+
+  - App requests 8 CPU & 32 GB RAM.
+  - Worker node only has 4 CPU & 16 GB RAM -> Pod cannot be scheduled.
+
+
+Microservices World & Service Discovery in Kubernetes:
+------------------------------------------------------
+
+Example Flow of different microservices in an ecommerce website talking to each other:
+
+- Service Catalog Microservice -> Checkout Microservice -> Payments Microservice
+- All microservices run inside Kubernetes Pods
+- Service discovery via Kubernetes Core DNS (which is an internal service and runs inside each Kubernetes Cluster) + Kubernetes Services (Kubernetes native object) ensures microservices can talk to each other reliably, without hardcoding IPs.
+
+Other Microservices examples which leverages Kubernetes Sevice Discovery:
+  E-commerce: User Service -> Cart Service -> Payment Service -> Notification Service
+  Streaming: User Profile -> Recommendation -> Streaming -> Billing
+  Banking: Account -> Transaction -> Fraud Detection -> Notification
+
+
+Pod and Containers:
+-------------------
+
+  - Pod = smallest unit in Kubernetes.
+  - Pod spec includes: container image (name, registry, tag).
+  - Pods usually run 1 main container + supporting (sidecar) containers.
+
+Examples of supporting containers:
+  
+  - Log collector -> ships logs to central system.
+  - Redis cache -> supports main app.
+  - Metrics exporter -> exposes monitoring data.
 
 
 How does Kubernetes cluster components Work Together:

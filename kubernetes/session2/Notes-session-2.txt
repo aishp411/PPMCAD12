@@ -1,0 +1,234 @@
+---------------------------
+Kubernetes Traning Program
+---------------------------
+
+-------------
+Session 2:
+-------------
+
+
+1.) Installting a self managed Kubernetes Cluster:
+--------------------------------------------------
+
+Steps:
+
+a.) Provision 3 virtual machines which would be a part of your cluster
+    - I have used terraform to provision 3 EC2 server on aws
+    - Reference scripts: Self-Managed-Kuberenetes-Cluster\tf-code
+
+b.) After the EC2 instances are provisioned, access them (ssh using your pem file)
+
+c.) Use the k8s-master.sh script to provision the master node
+    - Reference script: Self-Managed-Kuberenetes-Cluster\shell-scripts\k8s-master.sh
+
+d.) Use the k8s-worker.sh script to provision the worker node
+    - Reference script: Self-Managed-Kuberenetes-Cluster\shell-scripts\k8s-worker.sh
+
+e.) Merge the Kubeconfig file to your local workstation (which will mostly be your laptop)
+    - Run below mentioned commands preferable using git bash in windows laptop:
+        - cd /c/Users/<your-username>/.kube
+        - scp username@master_node_ip:/etc/kubernetes/admin.conf self-managed-cluster-config
+        - KUBECONFIG=/c/Users/<your-username>/.kube/config:/c/Users/<your-username>/.kube/self-managed-cluster-config kubectl config view --flatten > config-merged
+        - mv config-merged config
+
+f.) Check and swicth the context and further check the cluster status:
+    - Run below command:
+        - kubectl config get-contexts
+        - kubectl config use-context kubernetes-admin@kubernetes
+        - kubectl get pods -A 
+        - kubectl get cs // check control plane components are working fine or not
+
+
+Question.) How you can run the pod without Scheduler?
+
+Ans:
+
+Running a pod without the scheduler involves using static pods or manually specifying the node where the pod should run. 
+
+Here are two main approaches:
+
+a.) Using Static Pods:
+
+Static pods are managed directly by the kubelet on a specific node, without the involvement of the API server or the scheduler.
+
+When you run kubeadm init, it sets up the control plane components of a Kubernetes cluster. 
+
+Here's an overview of how the various components are started and where you can find their manifest files:
+
+Manifest file location:
+The static Pod manifest files for the control plane components are typically located in the /etc/kubernetes/manifests/ directory on the control plane node.
+
+Component startup process:
+kubeadm generates the necessary manifest files for core components.
+These manifests are placed in the /etc/kubernetes/manifests/ directory.
+The kubelet, which should already be running on the node, watches this directory.
+When the kubelet detects new or changed manifests, it creates static Pods based on these manifests.
+
+b.) Pod Specification with NodeName:
+
+e.g.:
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-on-specific-node
+spec:
+  containers:
+  - name: nginx
+    image: nginx
+  nodeName: your-node-name
+
+
+Important points to remember:
+- Static pods are created and managed by the kubelet, not the API server.
+- Pods with nodeName are still managed by the API server but bypass the scheduling process.
+- Both methods limit the flexibility and automatic rescheduling capabilities of Kubernetes.
+- These approaches are typically used for system pods or in specific scenarios where you need precise control over pod placement.
+
+
+2.) Installting Elastic Kubernetes Service (EKS) Cluster on AWS:
+----------------------------------------------------------------
+
+Steps:
+
+a.) Provision the EKS cluster manually or via the Terraform code // Request everyone to create the cluster manually
+    - I have used terraform to provision the cluster on aws
+    - Reference scripts: EKS\tf-code
+    - This script will provision the EKS cluster and associate the Node Group with it
+    - So, basically a running cluster is available for us
+
+b.) you should have awscli installed on your system to work with EKS
+    - Run below command to install it:
+    - msiexec.exe /i https://awscli.amazonaws.com/AWSCLIV2.msi
+    - aws --version // to check the version
+
+b.) Fetch EKS Kubeconfig file to your local workstation
+    - Run below mentioned command from powershell
+        - aws sts get-caller-identity // To verify your current user access on AWS
+        - aws eks update-kubeconfig --region <region-code> --name <cluster-name>
+        - kubectl get svc // To test the configuration
+
+
+3.) Detailed view into Kubernetes Objects:
+------------------------------------------
+
+3.1) Undertand Pods:
+--------------------
+Pods: Pods are the smallest deployable units in Kubernetes. A pod is scheduled on the one node, ensuring co-location of containers.
+
+Key features:
+- A pod can contain one or more containers
+- Containers within a pod share the same network namespace and can communicate via localhost
+- Ephermel in nature, and can be created, destroyed, and recreated dynamically.
+
+Pod Lifecycle: Pods have a defined lifecycle with states like Pending, Running, Succeeded, Failed, and Unknown.
+
+handson:
+- Get Pods status
+- Describe Pods // kubectl describe pod aws-node-5z5hq -n kube-system
+- Check the logs // kubectl logs aws-load-balancer-controller-6cb4b5dc7f-fwcwm -n kube-system
+- Delete the pod
+- check the pod manifest
+- understand the init containers and multi-container / sidecar container use case
+    - sample: manifests\multi-container-pod-demo.yaml
+- Logs of a container: kubectl logs multi-container-example -c log-sidecar
+- validate all the states of pod lifecycle
+    - sample: manifests\pod-lifecylce-demo.yaml
+
+Note: Not possible to simulate a unknown state pod, it typically occurs when the kubelet can't report on the status of a pod, often due to communication issues between the kubelet and the API server.
+
+3.2.) Understanding the Kubernetes RelicaSet & Deployment Object:
+-----------------------------------------------------------------
+
+ReplicaSets: ReplicaSets ensure that a specified number of pod replicas are running at any given time.
+
+Key features:
+- Maintains a stable set of replica Pods
+- Ensures high availability
+- Allows easy scaling of applications
+
+
+Deployments: Deployments provide declarative updates for Pods and ReplicaSets.
+
+Key features:
+- Describe desired state
+- Control the rate of change to Pods
+- Provide rollback functionality
+
+
+Why deployment over replicasets:
+
+- Deployments provide built-in support for rolling updates and easy rollbacks
+- Deployments maintain a revision history, allowing you to roll back to previous versions
+- Deployments offer configurable update strategies like RollingUpdate and Recreate
+- Deployments act as a higher-level abstraction, managing ReplicaSets behind the scenes
+
+
+handson:
+- check the deployment manifest
+    - sample: manifests\pcatalog-deployment-demo.yaml
+- deploy this
+- Get deployment status // kuectl get deployment -n default
+- Describe deployment
+- Check the logs
+- check the replicasets created from the deployment Object
+- check the pods created from the replicaset object
+- manually scale the deployment // kubectl scale deployment product-catalog-demo --replicas=5
+- update the deployment with the latest application version // change the image from nginx to httpd
+- rollback the deployment to the older version // kubectl rollout undo deployment/product-catalog
+- delete the deployment
+
+
+3.3.) Understanding the Kubernetes Service Object:
+--------------------------------------------------
+
+Services provide network access to a set of Pods.
+
+Types of Services:
+a.) ClusterIP: Exposes the service on an internal IP in the cluster
+b.) NodePort: Exposes the service on each Node's IP at a static port, but generally used in Non-prod scenarios, mention the range - (30000 - 32??)
+c.) LoadBalancer: Exposes the service externally using a cloud provider's load balancer
+
+Key features:
+Services provide a stable IP address and DNS name for a set of Pods
+Enables seamless service discovery and load balancing within the cluster
+Abstract the underlying Pod network, allowing applications to communicate without knowing the exact Pod IPs, which can change frequently.
+
+handson:
+- check the following service manifest
+    - sample: manifests\pcatalog-service-cip-demo.yaml
+    - sample: manifests\pcatalog-service-np-demo.yaml
+    - sample: manifests\pcatalog-service-lb-demo.yaml
+- Deploy the services
+- Get service status
+- Describe service
+- Check the logs
+
+Check the ClusterIp service by getting inside a container in the same namespace:
+e.g.: 
+- kubectl exec -it running-pod -- bash
+- 
+
+3.4.) Understanding the Kubernetes ConfigMaps & Secrets Object:
+---------------------------------------------------------------
+
+ConfigMaps allow us to decouple configuration artifacts from image content.
+
+Key features:
+- Store non-sensitive configuration data as key-value pairs or files.
+- Can be mounted as volumes or used as environment variables in Pods.
+
+Secrets are used to store and manage sensitive information.
+
+Key features:
+- Secrets are stored in a base64 encoded format
+- Store sensitive information (e.g., passwords, tokens) with encryption at rest in etcd.
+- Can be mounted as volumes or used as environment variables in Pods, similar to ConfigMaps, but with additional security measures.
+
+
+handson:
+- check the manifest files
+    - sample: manifests\pcatalog-cm-demo.yaml
+    - sample: manifests\pcatalog-secret-string-data-demo.yaml
+    - sample: manifests\pcatalog-secret-data-demo.yaml
+- Apply them
+- Check their accesibility in the Pods which are created via the deployment
