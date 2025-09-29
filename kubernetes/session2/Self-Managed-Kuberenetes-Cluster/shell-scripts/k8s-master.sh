@@ -5,7 +5,6 @@
 #2379 - 2380 from same-security-group-id
 #10250 - 10252 from same-security-group-id
 
-
 # For Ubuntu DISTRIB_RELEASE=22
 
 # Update the system
@@ -39,7 +38,6 @@ EOF
 sudo swapoff -a
 sudo sed -i '/ swap / s/^\(.*\)$/#\1/g' /etc/fstab
 
-
 # Add some settings to sysctl
 # These settings are crucial for Kubernetes networking to function correctly.
 # They allow Kubernetes services to communicate with each other and the outside world.
@@ -49,7 +47,6 @@ net.bridge.bridge-nf-call-ip6tables = 1
 net.bridge.bridge-nf-call-iptables = 1
 net.ipv4.ip_forward = 1
 EOF
-
 
 # Enable kernel modules
 # overlay: Needed for efficient container filesystem operations.
@@ -75,6 +72,11 @@ sudo apt-mark hold kubelet kubeadm kubectl
 # apt-mark hold command marks the kubelet, kubeadm, and kubectl packages as "held back".
 # When you run apt-get upgrade, these packages will not be upgraded, even if newer versions are available.
 
+# ensure kubelet are running before init
+sudo systemctl unmask kubelet || true
+sudo systemctl daemon-reload
+sudo systemctl enable --now kubelet
+sleep 2
 
 # Install crictl: It is a command-line interface for CRI-compatible container runtimes. You can use it to inspect and debug container runtimes and applications on a Kubernetes node.
 export CRICTL_VERSION="v1.30.1"
@@ -85,7 +87,7 @@ rm -f crictl-$CRICTL_VERSION-linux-$CRICTL_ARCH.tar.gz
 crictl version
 
 # Initialize the cluster
-kubeadm init --control-plane-endpoint 54.254.244.29:6443 --kubernetes-version 1.30.3 --pod-network-cidr 192.168.0.0/16 --v=5
+kubeadm init --control-plane-endpoint <master-node-public-ip>:6443 --kubernetes-version 1.30.3 --pod-network-cidr 192.168.0.0/16 --v=5
 
 # Breakdown the above command:
 

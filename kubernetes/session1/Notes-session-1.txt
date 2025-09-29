@@ -302,3 +302,27 @@ Explore before the next session:
 4.) Install Minikube and run all the manifest files share along with this notes
 5.) Explore Kubernetes Dashboard via minikube
 6.) Explore Kubernetes Impertive vs Declarative commands
+
+
+------------------------
+
+Anything which we run inside K8S cluster, 
+
+1 Control plane (static ip) - 2 worker nodes (static ips), 13.26.27.146:30080
+
+inside a VPC (That it should a public subnet - igw in its route table)
+
+I need to access the nginx from outside:
+
+Kubernetes Service:
+
+ClusterIP - This is what gives a static identity to pods in k8s
+NodePort - It will pick a port from range between 30000 - 32000, 30080 
+Load Balancer - It will create a LoadBalancer inside CloudProvider, it will create a NLB/ CLB inside AWS, Layer 4 Load Balancer inside Azure
+
+Ingress - 
+
+
+Node -> Deployment -> 5 Pods
+
+1 Service -> 5 Pods 

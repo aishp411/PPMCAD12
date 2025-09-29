@@ -77,5 +77,12 @@ tar zxvf crictl-$CRICTL_VERSION-linux-$CRICTL_ARCH.tar.gz -C /usr/local/bin
 rm -f crictl-$CRICTL_VERSION-linux-$CRICTL_ARCH.tar.gz
 crictl version
 
+# Ensure kubelet unit is available, unmasked and started so it can pick up configs written by kubeadm
+sudo systemctl unmask kubelet || true
+sudo systemctl daemon-reload
+sudo systemctl enable --now kubelet
+sleep 2
+
+
 echo "Kubernetes worker node setup complete!"
 echo "To join the cluster, run the kubeadm join command provided by the master node."

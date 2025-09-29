@@ -15,7 +15,7 @@ resource "aws_iam_openid_connect_provider" "eks" {
 
 resource "aws_eks_cluster" "this" {
   name    = var.cluster_name
-  version = local.eks_version
+  version = var.cluster_version
 
   role_arn = aws_iam_role.eks_cluster_role.arn
 

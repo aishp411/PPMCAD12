@@ -6,9 +6,28 @@ Kubernetes Traning Program
 Session 2:
 -------------
 
+How does Kubernetes cluster components Work Together:
+-----------------------------------------------------
+
+Control Plane and multiple worker nodes
+
+Component of Control Plane:
+
+- User/Admins interacts with the cluster through the API server
+- API server validates and processes the request
+- Scheduler assigns Pods to Nodes
+- Controller manager ensures desired state is maintained
+- kubelet (runs on both control plane and worker node) communicates with the API server and manages containers on the node
+- kube-proxy manages network communication for Pods
+- etcd saves the current state of the cluster
+
+
 
 1.) Installting a self managed Kubernetes Cluster:
 --------------------------------------------------
+
+KUBEADM: It is a tool specifically developed to provision self managed Kubernetes cluster
+
 
 Steps:
 
@@ -28,16 +47,29 @@ e.) Merge the Kubeconfig file to your local workstation (which will mostly be yo
     - Run below mentioned commands preferable using git bash in windows laptop:
         - cd /c/Users/<your-username>/.kube
         - scp username@master_node_ip:/etc/kubernetes/admin.conf self-managed-cluster-config
+
+        Via Linux:
         - KUBECONFIG=/c/Users/<your-username>/.kube/config:/c/Users/<your-username>/.kube/self-managed-cluster-config kubectl config view --flatten > config-merged
         - mv config-merged config
+
+        Via PowerShell:
+        - $env:KUBECONFIG = "$PWD\config;$PWD\self-managed-cluster.txt"
+        - kubectl config view --flatten | Out-File -FilePath "$PWD\config-merged" -Encoding utf8
+        - mv config-merged config
+        # Backup old config
+        - Rename-Item "$env:USERPROFILE\.kube\config" "config-backup"
+        # Replace with the merged config
+        - Move-Item ".\config-merged" "$env:USERPROFILE\.kube\config"
 
 f.) Check and swicth the context and further check the cluster status:
     - Run below command:
         - kubectl config get-contexts
         - kubectl config use-context kubernetes-admin@kubernetes
-        - kubectl get pods -A 
-        - kubectl get cs // check control plane components are working fine or not
+        - kubectl get pods -A
 
+Additonal Scripts to reset master and worker nodes, if provisioned from incorrect configuration added in the folder: Self-Managed-Kuberenetes-Cluster\shell-scripts
+
+Some questions for interview:
 
 Question.) How you can run the pod without Scheduler?
 
@@ -108,127 +140,52 @@ b.) Fetch EKS Kubeconfig file to your local workstation
         - kubectl get svc // To test the configuration
 
 
-3.) Detailed view into Kubernetes Objects:
-------------------------------------------
+Discussions during the class:
+-----------------------------
 
-3.1) Undertand Pods:
---------------------
-Pods: Pods are the smallest deployable units in Kubernetes. A pod is scheduled on the one node, ensuring co-location of containers.
+AWS VPC & subnets
+------------------
 
-Key features:
-- A pod can contain one or more containers
-- Containers within a pod share the same network namespace and can communicate via localhost
-- Ephermel in nature, and can be created, destroyed, and recreated dynamically.
+VPC:
+Contains one or more subnets (public and private).
+Choose a non-overlapping CIDR (example: 10.0.0.0/16).
 
-Pod Lifecycle: Pods have a defined lifecycle with states like Pending, Running, Succeeded, Failed, and Unknown.
+Public subnet:
+- Route table must have a route to the Internet Gateway (IGW) (e.g. 0.0.0.0/0 -> igw-xxxx).
+- Instances launched here can have public IPv4 addresses (or an Elastic IP).
+- Use for bastion hosts, NAT gateways (in AWS), and public-facing load balancers.
 
-handson:
-- Get Pods status
-- Describe Pods // kubectl describe pod aws-node-5z5hq -n kube-system
-- Check the logs // kubectl logs aws-load-balancer-controller-6cb4b5dc7f-fwcwm -n kube-system
-- Delete the pod
-- check the pod manifest
-- understand the init containers and multi-container / sidecar container use case
-    - sample: manifests\multi-container-pod-demo.yaml
-- Logs of a container: kubectl logs multi-container-example -c log-sidecar
-- validate all the states of pod lifecycle
-    - sample: manifests\pod-lifecylce-demo.yaml
+Private subnet:
+- Route table should not contain a route to an IGW.
+- For outbound internet access (e.g., for updating any packages like java, nginx etc. or pulling container images), traffic should be routed to a NAT gateway which resides in a public subnet. Example: 0.0.0.0/0 -> nat-xxxx in private subnet route table.
+- Use private subnets for application servers, databases, and other non-public resources.
 
-Note: Not possible to simulate a unknown state pod, it typically occurs when the kubelet can't report on the status of a pod, often due to communication issues between the kubelet and the API server.
+Access patterns:
 
-3.2.) Understanding the Kubernetes RelicaSet & Deployment Object:
------------------------------------------------------------------
+Accessing an instance in a public subnet:
+    - SSH directly to the instance’s public IP (subject to security group rules).
+    - Prefer restricting SSH access by IP range (security group) — do not open 0.0.0.0/0 unless unavoidable.
 
-ReplicaSets: ReplicaSets ensure that a specified number of pod replicas are running at any given time.
-
-Key features:
-- Maintains a stable set of replica Pods
-- Ensures high availability
-- Allows easy scaling of applications
+Accessing an instance in a private subnet:
+    - Typical flow:
+        - SSH to a bastion/jump host in the public subnet (bastion has public IP).
+        - From the bastion, SSH to the private instance via its private IP.
+        - Ensure Security Groups allow SSH from the bastion’s SG to private instances
 
 
-Deployments: Deployments provide declarative updates for Pods and ReplicaSets.
+Auto-scaling (ASG) basics:
+--------------------------
 
-Key features:
-- Describe desired state
-- Control the rate of change to Pods
-- Provide rollback functionality
+min - minimum number of instances the ASG will maintain (never goes below).
+max - maximum number of instances the ASG may scale up to.
+desired - current target capacity of the ASG (initial size). ASG will try to maintain this unless scaling policies change it.
 
+Typical example: min=2, desired=3, max=6 for a resilient application tier.
 
-Why deployment over replicasets:
+Kubernetes-specific worker nodes placement:
+-------------------------------------------
 
-- Deployments provide built-in support for rolling updates and easy rollbacks
-- Deployments maintain a revision history, allowing you to roll back to previous versions
-- Deployments offer configurable update strategies like RollingUpdate and Recreate
-- Deployments act as a higher-level abstraction, managing ReplicaSets behind the scenes
-
-
-handson:
-- check the deployment manifest
-    - sample: manifests\pcatalog-deployment-demo.yaml
-- deploy this
-- Get deployment status // kuectl get deployment -n default
-- Describe deployment
-- Check the logs
-- check the replicasets created from the deployment Object
-- check the pods created from the replicaset object
-- manually scale the deployment // kubectl scale deployment product-catalog-demo --replicas=5
-- update the deployment with the latest application version // change the image from nginx to httpd
-- rollback the deployment to the older version // kubectl rollout undo deployment/product-catalog
-- delete the deployment
-
-
-3.3.) Understanding the Kubernetes Service Object:
---------------------------------------------------
-
-Services provide network access to a set of Pods.
-
-Types of Services:
-a.) ClusterIP: Exposes the service on an internal IP in the cluster
-b.) NodePort: Exposes the service on each Node's IP at a static port, but generally used in Non-prod scenarios, mention the range - (30000 - 32??)
-c.) LoadBalancer: Exposes the service externally using a cloud provider's load balancer
-
-Key features:
-Services provide a stable IP address and DNS name for a set of Pods
-Enables seamless service discovery and load balancing within the cluster
-Abstract the underlying Pod network, allowing applications to communicate without knowing the exact Pod IPs, which can change frequently.
-
-handson:
-- check the following service manifest
-    - sample: manifests\pcatalog-service-cip-demo.yaml
-    - sample: manifests\pcatalog-service-np-demo.yaml
-    - sample: manifests\pcatalog-service-lb-demo.yaml
-- Deploy the services
-- Get service status
-- Describe service
-- Check the logs
-
-Check the ClusterIp service by getting inside a container in the same namespace:
-e.g.: 
-- kubectl exec -it running-pod -- bash
-- 
-
-3.4.) Understanding the Kubernetes ConfigMaps & Secrets Object:
----------------------------------------------------------------
-
-ConfigMaps allow us to decouple configuration artifacts from image content.
-
-Key features:
-- Store non-sensitive configuration data as key-value pairs or files.
-- Can be mounted as volumes or used as environment variables in Pods.
-
-Secrets are used to store and manage sensitive information.
-
-Key features:
-- Secrets are stored in a base64 encoded format
-- Store sensitive information (e.g., passwords, tokens) with encryption at rest in etcd.
-- Can be mounted as volumes or used as environment variables in Pods, similar to ConfigMaps, but with additional security measures.
-
-
-handson:
-- check the manifest files
-    - sample: manifests\pcatalog-cm-demo.yaml
-    - sample: manifests\pcatalog-secret-string-data-demo.yaml
-    - sample: manifests\pcatalog-secret-data-demo.yaml
-- Apply them
-- Check their accesibility in the Pods which are created via the deployment
+- Put worker nodes in private subnets (no public IP), with NAT for outbound access
+- control-plane can be public or private depending on design.
+- Use ELB/ALB in public subnets for external traffic
+- When creating managed node group for k8s, ensure subnets span multiple AZs for HA.
