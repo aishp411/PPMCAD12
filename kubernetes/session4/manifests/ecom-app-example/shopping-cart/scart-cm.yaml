@@ -1,9 +1,0 @@
-# Shopping Cart ConfigMap
-apiVersion: v1
-kind: ConfigMap
-metadata:
-  name: shopping-cart-config
-data:
-  REDIS_URL: "redis://cart-cache:6379"
-  SESSION_TIMEOUT: "30m"
-  MAX_ITEMS: "50"

@@ -1,5 +1,5 @@
 ---------------------------
-Kubernetes Traning Program
+Kubernetes Training Program
 ---------------------------
 
 -------------
@@ -10,7 +10,7 @@ Session 3:
 Detailed view into Kubernetes Objects:
 --------------------------------------
 
-Undertand Pods:
+Understand Pods:
 ----------------
 
 Pods: Pods are the smallest deployable units in Kubernetes. A pod is scheduled on the one node, ensuring co-location of containers.
@@ -26,7 +26,7 @@ handson:
 - Get Pods status
 - Describe Pods // kubectl describe pod aws-node-5z5hq -n kube-system
 - Check the logs // kubectl logs aws-load-balancer-controller-6cb4b5dc7f-fwcwm -n kube-system
-- Delete the pod
+- Delete the pod // kubectl delete pod <pod-name> -n <namespace> // kubectl delete -f <yaml-file-path-name>.yaml
 - check the pod manifest
 - understand the init containers and multi-container / sidecar container use case
     - sample: manifests\multi-container-pod-demo.yaml
@@ -47,9 +47,11 @@ Deployments: Deployments provide declarative updates for Pods and ReplicaSets.
 
 Key features:
 - Describe desired state
-- Control the rate of change to Pods
+- Control the rate of change to Pods // release new changes to an application without any downtime
 - Provide rollback functionality
 
+
+Deployment -> RelicaSet -> Pod/s
 
 Why deployment over replicasets:
 
@@ -72,7 +74,7 @@ handson:
 - update the deployment with the latest application version // change the image from nginx to httpd
 - rollback the deployment to the older version // kubectl rollout undo deployment/product-catalog
 - delete the deployment
-
+- Check rollout history // kubectl rollout history deployment/<deployment_name> -n <namespace>
 
 Understanding the Kubernetes Service Object:
 --------------------------------------------
@@ -81,7 +83,24 @@ Services provide network access to a set of Pods.
 
 Types of Services:
 a.) ClusterIP: Exposes the service on an internal IP in the cluster
-b.) NodePort: Exposes the service on each Node's IP at a static port, but generally used in Non-prod scenarios, the range of nodeport: 30000 - 32767
+ 5 nginx pods -> all of them havibng separate ephemeral IPs
+
+ I create a ClusterIp service -> Point this service to 5 Pods via labels and selectors
+
+ and now I get a fixed identity
+
+ the service will have 2 attributes: 1.) Static Private IP (which will never change) 2.) Static Domain name for my pods running inside Kubernetes
+
+ It is meant for service to communicate with each other
+
+The end user is only accessing the frontend service:
+
+ frontend service (externally available) -> backend service -> database service (assuming db is running inside k8s)
+
+b.) NodePort (used for lower env dev/test): Exposes the service on each Worker Node's IP at a static port, but generally used in Non-prod scenarios, the range of nodeport: 30000 - 32767
+
+54.179.26.128:30080 / 172.31.29.60:30080 / 54.151.189.127:30080
+
 c.) LoadBalancer: Exposes the service externally using a cloud provider's load balancer
 
 Key features:

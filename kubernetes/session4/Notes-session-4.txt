@@ -11,9 +11,9 @@ Browser (User / Client) -> flipkart.com -> DNS name gets resolved -> route53 -> 
 -> EKS Cluster (Ingress Controllers) -> Ingress Resource / File -> Based on the Ingress file the request is sent to the specific service -> pod
 
 Some popular controllers include:
-a.) AWS Load Balancer Controller to manage Application Load Balancers for EKS
-b.) AKS Application Gateway Ingress Controller that configures the Azure Application Gateway for AKS
-c.) Ingress-Nginx (Open-Source) Controller for Kubernetes using NGINX as a reverse proxy and load balancer for any Kubernetes Cluster
+a.) Ingress-Nginx (Open-Source) Controller for Kubernetes using NGINX as a reverse proxy and load balancer for any Kubernetes Cluster
+b.) AWS Load Balancer Controller to manage Application Load Balancers for EKS
+c.) AKS Application Gateway Ingress Controller that configures the Azure Application Gateway for AKS
 d.) Nginx-Ingress (Enterprise managed by Nginx company)
 
 
@@ -26,50 +26,9 @@ Key features:
 - Directs requests to different services based on the URL path.
 - Allows configuration of routing rules in one place.
 
-handson for AWS Load Balancer Controller:
------------------------------------------
-
-- Deploy the AWS Load Balancer Controller (Ingress Controller).
-    - Steps to install AWS Load Balancer Controller: AWS-Load-Balancer-Controller\Installation-Guide.txt
-
-- Now, deploy a real world application simple e-commerce application with three microservices: a product catalog, a shopping cart, and an order service.
-- All the manifest files related to this application are placed in the directory: manifests\ecom-app-example
-
-- Deploy them
-    - kubectl apply -f .\manifests\ecom-app-example\order-service\
-    - kubectl apply -f .\manifests\ecom-app-example\product-catalog\
-    - kubectl apply -f .\manifests\ecom-app-example\shopping-cart\
-	
-- Update the security group mentioned in the ingress file: manifests\ecom-app-example\ingress.yaml
-	- Open the file and edit following line:
-		- alb.ingress.kubernetes.io/security-groups
-	- Pick the security group id from your AWS EKS cluster where the this ingress is deployed and add that id in this file
-
-- Open Port 80 from 0.0.0.0/0 in the security group which is used above in the ingress file
-
-Apply the ingress file:
-	- kubectl apply -f .\manifests\ecom-app-example\ingress.yaml
-
-- View existing Ingress resource using:
-	- kubectl get ingress -n default
-	
-- If you do not see a Load Balancer DNS in the output above, then debug:
-	- kubectl describe ingress ecommerce-ingress -n default
-	
-- Debug Further by checking the Ingress Controller logs:
-	- kubectl logs -n ingress-nginx deploy/ingress-nginx-controller -n default
-	
-- Finally the AWS Application load Balancer should be created by the ingress resource automatically and you should be able to verify that on the AWS console
-
-- Browse the ALB DNS and traverse through different path mentioned in the ingress file.
-
 
 handson for Ingress Nginx Controller:
 -------------------------------------
-
-- First delete the AWS Load Balancer Controller, so that it does not interfere with the Ingress Nginx Controller
-	- Command:
-		- helm uninstall aws-load-balancer-controller -n kube-system
 
 - Deploy the Ingress Nginx Controller.
     - Steps to install Ingress Nginx Controller:
@@ -93,15 +52,3 @@ handson for Ingress Nginx Controller:
 - Verify the application using the NLB DNS copied earlier
 	- http://<nlb-dns>/app1
 	- http://<nlb-dns>/app2
-
-Difference between Nginx Ingress Controller & AWS Load Balancer Controller:
----------------------------------------------------------------------------
-
-AWS Load Balancer Controller: 
-- Specifically designed for AWS, tightly integrated with AWS services.
-- Creates and manages AWS-native load balancers (Application Load Balancer, Network Load Balancer).
-
-ingress-nginx: 
-- Cloud-agnostic, can run on any Kubernetes cluster regardless of the underlying infrastructure.
-- Uses NGINX as the load balancer, which runs within the Kubernetes cluster and associate itself with an external load balancer which sends the traffic to Kubernetes nodes and then to the Nginx Controller Pods
-
