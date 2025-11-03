@@ -1,5 +1,5 @@
 ---------------------------
-Kubernetes Traning Program
+Kubernetes Training Program
 ---------------------------
 
 Virtual Machine vs Container
@@ -38,7 +38,7 @@ There are 2 options but in both of them, Docker Desktop runs a Linux OS in the b
 - Option 2: Docker Desktop can also integrate natively with WSL2, which runs a lightweight Linux kernel in the background.
 
 
-Additonal Question discussed during the session:
+Additional Question discussed during the session:
 ------------------------------------------------
 
 1.) Developer Use Cases
@@ -74,7 +74,7 @@ Expanded view:
   - No matter where you run it (developer laptop, CI/CD pipeline, on-prem server, or cloud provider), the application behaves the same.
 
 - Portability:
-  - A container image is generally lightweight excluding a few windows conatiners, standardized, and can run anywhere there's a container runtime (Docker, containerd, CRI-O).
+  - A container image is generally lightweight excluding a few windows containers, standardized, and can run anywhere there's a container runtime (Docker, containerd, CRI-O).
 
   - This makes applications cloud-agnostic -> the same image runs on AWS, Azure, GCP, or on bare-metal servers.
 
@@ -145,7 +145,7 @@ Example Flow of different microservices in an ecommerce website talking to each 
 - All microservices run inside Kubernetes Pods
 - Service discovery via Kubernetes Core DNS (which is an internal service and runs inside each Kubernetes Cluster) + Kubernetes Services (Kubernetes native object) ensures microservices can talk to each other reliably, without hardcoding IPs.
 
-Other Microservices examples which leverages Kubernetes Sevice Discovery:
+Other Microservices examples which leverages Kubernetes Service Discovery:
   E-commerce: User Service -> Cart Service -> Payment Service -> Notification Service
   Streaming: User Profile -> Recommendation -> Streaming -> Billing
   Banking: Account -> Transaction -> Fraud Detection -> Notification
@@ -298,10 +298,10 @@ Explore before the next session:
 
 1.) How does DNS record gets resolved: e.g: How does the domain name https://kubernetes.io will get resolved in your browser
 2.) Try to containerize an application by yourself, a simple java / python / nodejs program.
-3.) What are containers, and why their adaptibility is very high?
+3.) What are containers, and why their adaptability is very high?
 4.) Install Minikube and run all the manifest files share along with this notes
 5.) Explore Kubernetes Dashboard via minikube
-6.) Explore Kubernetes Impertive vs Declarative commands
+6.) Explore Kubernetes Imperative vs Declarative commands
 
 
 ------------------------

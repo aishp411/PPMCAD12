@@ -13,6 +13,7 @@ spec:
     volumeMounts:
     - name: empty-dir-volume
       mountPath: /var/log/nginx
+
   - name: web-app
     image: nginx
     ports:
@@ -20,6 +21,7 @@ spec:
     volumeMounts:
     - name: empty-dir-volume
       mountPath: /var/log/nginx
+  
   volumes:
   - name: empty-dir-volume # Volumes shared between containers using emptyDir
     emptyDir: {}

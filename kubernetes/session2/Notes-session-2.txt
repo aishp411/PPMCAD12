@@ -1,5 +1,5 @@
 ---------------------------
-Kubernetes Traning Program
+Kubernetes Training Program
 ---------------------------
 
 -------------
@@ -23,7 +23,7 @@ Component of Control Plane:
 
 
 
-1.) Installting a self managed Kubernetes Cluster:
+1.) Installing a self managed Kubernetes Cluster:
 --------------------------------------------------
 
 KUBEADM: It is a tool specifically developed to provision self managed Kubernetes cluster
@@ -33,15 +33,15 @@ Steps:
 
 a.) Provision 3 virtual machines which would be a part of your cluster
     - I have used terraform to provision 3 EC2 server on aws
-    - Reference scripts: Self-Managed-Kuberenetes-Cluster\tf-code
+    - Reference scripts: Self-Managed-Kubernetes-Cluster\tf-code
 
 b.) After the EC2 instances are provisioned, access them (ssh using your pem file)
 
 c.) Use the k8s-master.sh script to provision the master node
-    - Reference script: Self-Managed-Kuberenetes-Cluster\shell-scripts\k8s-master.sh
+    - Reference script: Self-Managed-Kubernetes-Cluster\shell-scripts\k8s-master.sh
 
 d.) Use the k8s-worker.sh script to provision the worker node
-    - Reference script: Self-Managed-Kuberenetes-Cluster\shell-scripts\k8s-worker.sh
+    - Reference script: Self-Managed-Kubernetes-Cluster\shell-scripts\k8s-worker.sh
 
 e.) Merge the Kubeconfig file to your local workstation (which will mostly be your laptop)
     - Run below mentioned commands preferable using git bash in windows laptop:
@@ -61,13 +61,13 @@ e.) Merge the Kubeconfig file to your local workstation (which will mostly be yo
         # Replace with the merged config
         - Move-Item ".\config-merged" "$env:USERPROFILE\.kube\config"
 
-f.) Check and swicth the context and further check the cluster status:
+f.) Check and switch the context and further check the cluster status:
     - Run below command:
         - kubectl config get-contexts
         - kubectl config use-context kubernetes-admin@kubernetes
         - kubectl get pods -A
 
-Additonal Scripts to reset master and worker nodes, if provisioned from incorrect configuration added in the folder: Self-Managed-Kuberenetes-Cluster\shell-scripts
+Additional Scripts to reset master and worker nodes, if provisioned from incorrect configuration added in the folder: Self-Managed-Kubernetes-Cluster\shell-scripts
 
 Some questions for interview:
 
@@ -117,7 +117,7 @@ Important points to remember:
 - These approaches are typically used for system pods or in specific scenarios where you need precise control over pod placement.
 
 
-2.) Installting Elastic Kubernetes Service (EKS) Cluster on AWS:
+2.) Installing Elastic Kubernetes Service (EKS) Cluster on AWS:
 ----------------------------------------------------------------
 
 Steps:

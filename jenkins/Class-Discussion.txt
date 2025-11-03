@@ -14,7 +14,7 @@ Role Overlaps
 
 Cloud Engineer / Platform Engineer / DevOps Engineer / SRE (Site Reliability Engineer)
 
-Above mentioned skillsets are Overlapping in all of these roles.
+Above mentioned skill sets are Overlapping in all of these roles.
 
 Docker vs. Kubernetes:
 ----------------------
@@ -101,7 +101,7 @@ Jenkins:
 --------
 
 - A widely used CI/CD tool that executes pipelines.
-- Can also run ad-hoc automations and scripts.
+- Can also run ad-hoc automation and scripts.
 
 
 Poll SCM vs. Webhooks:
@@ -139,7 +139,7 @@ Restore Steps:
     - No secrets should be in plain text in the Pipeline
     - Make use of the environment variables
 
-6.) Managing and Runnning the pipelines
+6.) Managing and Running the pipelines
     - Issues w.r.t Agent not running: Check the Agent logs, fix the issue and restart
     - Pipeline failures: Check each and every line in the Console Output, find the issue, resolve the issue and re-run
 
@@ -196,7 +196,7 @@ How many Jenkinsfile should I have?
 
 How do I finalize that what is an optimized way to create a Jenkinsfile/s for my product / project?
 
--- Always 1st brainstorm on the extected outcome
+-- Always 1st brainstorm on the expected outcome
     - On each dev commit, I should be able to build/ install/ run tests on it
     - On all the commit on my "xyz" branch or all the merges to my "xyz" branch, build/ install/ run tests and deploy the code in "dev" env
     - Once everything is merged on "qa" branch, run the regression test after deploying my codebase to qa env

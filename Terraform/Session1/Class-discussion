@@ -1,0 +1,65 @@
+---------------------------
+Terraform Training Program
+---------------------------
+
+-------------
+Session 1:
+-------------
+
+I have to deploy an ecommerce site in AWS
+
+-> IAM Policies and Roles
+-> VPC - route table - subnets (private and public)
+-> Multiple EC2s with EBS
+-> Auto-scaling groups
+-> S3
+-> Load Balancer
+-> AWS RDS (Database)
+-> CloudWatch (Monitoring)
+
+- First there should be a Dev env for dev team wherein they continuous deploy and test their changes
+
+-> First time, we do everything manually and make sure to capture each and every step and capture the screenshot as well, thus create a runbook or playbook
+
+-> Identify the chunks which can be automated via script
+
+- 2nd for QA Team there should a QA team
+
+- 3rd Staging / UAT for pre-prod changes
+
+- Finally the production env
+
+-----------
+
+Windows - Batch
+Linux - Shell Scripting
+
+-----------
+
+Infrastructure as Code:
+-----------------------
+AWS -> CloudFormation
+Azure -> ARM template, Biceps
+OpenSource -> Terraform, Pulumi (Requires extensive programming capability)
+
+Configuration Management:
+-------------------------
+Ansible
+Chef
+Puppet
+
+HashiCorp - Open Source product known as Terraform
+
+Terraform is vendor agnostic and is the most appropriate tool for Infra provisioning vi IAC
+
+You write the code in its own HCL - HashiCorp Configuration Language
+
+This was / is by far the easiest way to code without knowing how to write in complex languages....
+
+you can simply state the configuration which you desire...
+
+I can state:
+
+Create VPC - with its cidr range....
+
+Entire Cloud experts started contributing in Terraform Open Source Code Base...

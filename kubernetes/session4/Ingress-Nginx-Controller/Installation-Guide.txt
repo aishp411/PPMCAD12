@@ -8,6 +8,8 @@ This section explains how to do that on AWS using an NLB.
 1.) Download the deploy.yaml template
 wget https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v1.12.0-beta.0/deploy/static/provider/aws/deploy.yaml
 
+the git repo: https://github.com/kubernetes/ingress-nginx/
+
 Kept the downloaded file here for reference
 
 2.) Deploy this manifest file:

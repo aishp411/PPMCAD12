@@ -1,3 +1,11 @@
+---------------------------
+Kubernetes Training Program
+---------------------------
+
+-------------
+Session 6:
+-------------
+
 CSI (Container Storage Interface):
 
 Main Usage:
@@ -52,7 +60,7 @@ By default:
  - Each container has its isolated On-disk filesystem
  - Containers can't share files
  - All files are lost when containers restart meaning the pod restart or deleted
-
+ 
 
 Introduction to Kubernetes Volumes
 -----------------------------------
@@ -81,8 +89,12 @@ PV (PersistentVolume) and PVC (PersistentVolumeClaim) are Kubernetes resources u
     - Resources in the cluster that provide storage. 
     - Provisioned statically by an administrator or dynamically using Storage Classes.
     - Preferred as they provide better data persistence and availability
-    - Some common examples are: NFS, AWS EBS, Azure Disk, distributed storage
+    - Some common examples are: NFS, AWS EBS, Azure Disk, distributed storage, AWS EFS, AWS Files
     - Requires a corresponding Container Storage Interface (CSI) driver in your cluster, as without the appropriate CSI driver, the cluster cannot communicate with the storage provider to provision and manage volumes
+
+    EKS (Kubernetes) <-----Connection-----> EBS
+                        EBS CSI DRIVER
+        IAM Roles with appropriate policies and linking that role with Kubernetes
 
         e.g.: PV with AWS EBS: manifests\ebs-pv-demo.yaml
 
@@ -95,13 +107,31 @@ PV (PersistentVolume) and PVC (PersistentVolumeClaim) are Kubernetes resources u
 Understanding Access modes for PVs:
     ReadWriteOnce (RWO): Volume can be mounted as read-write by a single node - EBS
     ReadOnlyMany (ROX): Volume can be mounted read-only by many nodes - NFS / EFS
-    ReadWriteMany (RWX): Volume can be mounted as read-write by many nodes - EFS
+    ReadWriteMany (RWX): Volume can be mounted as read-write by many nodes/servers - NFS / EFS
 
     Note: Not all volume types support all access modes. For example, AWS EBS volumes only support ReadWriteOnce.
+
+
+When to use NFS / EFS in Kubernetes?
+
+    - When I have an application running in K8S with 5 replicas and I need to share a common persistent folder between all of them
+
+When to use EBS / Block Storage in Kubernetes?
+
+    - When I have a Database running in K8S with 5 replicas (pods) but each replica / pod needs its own persistent storage, then go for EBS
+
+    - MySQL Cluster / MongoDB Cluster
+    - Outside K8S - In any database clusters... You will run 5 / 6 / n number of servers... it is preferred that all of them use their own attached storage rather than a shared storage
 
 handson:
 Pre-Requisite: If you need AWS EBS to be attached with your pod for providing persistent storage then AWS EBS CSI Driver must be installed in your cluster.
     - Installation Steps: AWS-EBS-CSI-Driver\Installation-Guide.txt
+
+
+
+/// Update the Installation-Guide.txt, remove old references
+
+
 
 - check & deploy the manifest files
     - kubectl apply -f manifests\ebs-pv-demo.yaml

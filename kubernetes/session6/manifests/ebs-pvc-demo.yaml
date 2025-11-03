@@ -9,3 +9,4 @@ spec:
   resources:
     requests:
       storage: 5Gi # Specifies the amount of storage requested
+  volumeName: ebs-pv-demo # Must match the exact name of the PV

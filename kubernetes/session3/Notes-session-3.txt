@@ -18,7 +18,7 @@ Pods: Pods are the smallest deployable units in Kubernetes. A pod is scheduled o
 Key features:
 - A pod can contain one or more containers
 - Containers within a pod share the same network namespace and can communicate via localhost
-- Ephermel in nature, and can be created, destroyed, and recreated dynamically.
+- Ephemeral in nature, and can be created, destroyed, and recreated dynamically.
 
 Pod Lifecycle: Pods have a defined lifecycle with states like Pending, Running, Succeeded, Failed, and Unknown.
 
@@ -32,7 +32,7 @@ handson:
     - sample: manifests\multi-container-pod-demo.yaml
 - Logs of a container: kubectl logs multi-container-example -c log-sidecar
 
-Understanding the Kubernetes RelicaSet & Deployment Object:
+Understanding the Kubernetes ReplicaSet & Deployment Object:
 ------------------------------------------------------------
 
 ReplicaSets: ReplicaSets ensure that a specified number of pod replicas are running at any given time.
@@ -51,7 +51,7 @@ Key features:
 - Provide rollback functionality
 
 
-Deployment -> RelicaSet -> Pod/s
+Deployment -> ReplicaSet -> Pod/s
 
 Why deployment over replicasets:
 
@@ -65,7 +65,7 @@ handson:
 - check the deployment manifest
     - sample: manifests\pcatalog-deployment-demo.yaml
 - deploy this
-- Get deployment status // kuectl get deployment -n default
+- Get deployment status // kubectl get deployment -n default
 - Describe deployment
 - Check the logs
 - check the replicasets created from the deployment Object
@@ -83,7 +83,7 @@ Services provide network access to a set of Pods.
 
 Types of Services:
 a.) ClusterIP: Exposes the service on an internal IP in the cluster
- 5 nginx pods -> all of them havibng separate ephemeral IPs
+ 5 nginx pods -> all of them having separate ephemeral IPs
 
  I create a ClusterIp service -> Point this service to 5 Pods via labels and selectors
 
@@ -101,6 +101,7 @@ b.) NodePort (used for lower env dev/test): Exposes the service on each Worker N
 
 54.179.26.128:30080 / 172.31.29.60:30080 / 54.151.189.127:30080
 
+
 c.) LoadBalancer: Exposes the service externally using a cloud provider's load balancer
 
 Key features:
@@ -117,6 +118,34 @@ handson:
 - Get service status
 - Describe service
 - Check the logs
+
+Think of a scenario:
+
+wherein we are hosting a microservices based app:
+
+it has following microservices:
+
+frontend  <-> LoadBalancer 
+admin     <-> LoadBalancer
+api       <-> LoadBalancer
+backend   - clusterIP
+database  - clusterIP
+
+https://demo.com
+----
+
+Ingress: Will create 1 LoadBalancer and then it will start forwarding the requests to different services:
+
+Route53 (DNS Service of AWS) : Record for demo.com pointing to the NLB created by Ingress
+
+The NLB will forward the traffic to internal ingress controller
+
+https://demo.com -> frontend service -> backend service -> database service 
+https://demo.com/admin -> admin service -> backend service -> database service 
+https://demo.com/api -> api service -> backend service -> database service 
+
+
+
 
 Check the ClusterIp service by getting inside a container in the same namespace:
 e.g.: 
@@ -138,6 +167,12 @@ Key features:
 - Store sensitive information (e.g., passwords, tokens) with encryption at rest in etcd.
 - Can be mounted as volumes or used as environment variables in Pods, similar to ConfigMaps, but with additional security measures.
 
+kubec@kubec:~$ echo "very-secret-password" | base64
+dmVyeS1zZWNyZXQtcGFzc3dvcmQK
+kubec@kubec:~$
+kubec@kubec:~$ echo "dmVyeS1zZWNyZXQtcGFzc3dvcmQK" | base64 -d
+very-secret-password
+
 
 handson:
 - check the manifest files
@@ -145,16 +180,16 @@ handson:
     - sample: manifests\pcatalog-secret-string-data-demo.yaml
     - sample: manifests\pcatalog-secret-data-demo.yaml
 - Apply them
-- Check their accesibility in the Pods which are created via the deployment
+- Check their accessibility in the Pods which are created via the deployment
 
 
 
 Understanding the Kubernetes Horizontal Pod Autoscaling:
 ---------------------------------------------------------
 
-Pre-requisite: Deployment of Metrics server is required for HPA to function. Metrics server helps to analyse Node and Pod Level CPU and Memory status.
+Pre-requisite: Deployment of Metrics server is required for HPA to function. Metrics server helps to analyze Node and Pod Level CPU and Memory status.
     - Steps to install metrics server: metrics-server\Installation-Guide.txt
-    - Run below command to get the pods and nodes metrices:
+    - Run below command to get the pods and nodes metrics:
         kubectl top pods -A
         kubectl top node
 
@@ -183,8 +218,8 @@ handson:
         - Run:
             while true; do curl -s -o /dev/null -w "%{http_code}" http://<SERVICE_IP_OBTAINED_ABOVE>;done
 
-            while true; do curl -s -o /dev/null -w "%{http_code}" http://10.109.197.76;done
-- Switch between different terminals to see the CPU percentage increasing and subesequent scaling of Pods
+            while true; do curl -s -o /dev/null -w "%{http_code}" http://product-catalog-cip-service;done
+- Switch between different terminals to see the CPU percentage increasing and subsequent scaling of Pods
 - Stop the curl command in the 3rd terminal to stop the load
 - Again check the CPU percentage and the pods getting scaled back down
 - Delete HPA

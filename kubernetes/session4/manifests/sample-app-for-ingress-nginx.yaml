@@ -8,7 +8,7 @@ data:
     <!DOCTYPE html>
     <html>
     <body>
-        <h1>Hello, World, I am serving from app1!</h1>
+        <h1>Hello, World, I am serving from <praful> app1!</h1>
     </body>
     </html>
 ---
@@ -31,7 +31,7 @@ spec:
         image: nginx
         volumeMounts:
         - name: app1-volume
-          mountPath: /usr/share/nginx/html/app1
+          mountPath: /usr/share/nginx/html/praful-app1
         ports:
         - containerPort: 80
       volumes:
@@ -83,7 +83,7 @@ spec:
         image: nginx
         volumeMounts:
         - name: app2-volume
-          mountPath: /usr/share/nginx/html/app2
+          mountPath: /usr/share/nginx/html/praful-app2
         ports:
         - containerPort: 80
       volumes:
@@ -114,14 +114,14 @@ spec:
   rules:
   - http:
       paths:
-      - path: /app1
+      - path: /praful-app1
         pathType: Prefix
         backend:
           service:
             name: app1-service
             port: 
               number: 80
-      - path: /app2
+      - path: /praful-app2
         pathType: Prefix
         backend:
           service:

@@ -1,5 +1,59 @@
+---------------------------
+Kubernetes Training Program
+---------------------------
+
+-------------
+Session 4:
+-------------
+
 Understanding the Kubernetes Ingress:
 -------------------------------------
+
+How do you expose service externally?
+- There are 2 ways to do it:
+	- LoadBalancer service - which will create a Load Balancer in Cloud
+	- NodePort service - Not preferred for prod use cases
+
+If I am running an Ecommerce website in Kubernetes:
+	- It has following microservices:
+		- Admin - External - LoadBalancer
+		- Frontend - External - LoadBalancer
+		- Backend - Internal - ClusterIP
+		- Database - Internal - ClusterIP
+
+We will end up with 2 Load Balancers in AWS..
+
+The LBs are the external endpoint which receive the request from end users..
+
+After receiving the request forward the request to multiple Services
+
+Problem of having multiple Load Balancers:
+
+- Management: Troubleshooting is tough, configurations, multiple listener rules, multiple target groups, multiple SSL certificates
+- Cost: un-necessarily we are paying for multiple Load Balancers when the need should have been fulfilled with 1.
+- Resource utilization which will lead to more cost..
+
+So the need of an ideal way was thought upon:
+
+if a user is accessing https://shopnow.com
+
+The request flow should be:
+
+user (browser) (https://shopnow.com) -> DNS (route53) -> it will find a record for shopnow.com -> 1 Load Balancer -> multiple services running in Kubernetes
+					--------
+				Ingress Controller + Ingress 
+
+I write certain rules:
+
+1.) Whenever the request comes to / or "" meaning https://shopnow.com/ or https://shopnow.com
+
+then the request should go to Frontend service
+
+2.) Whenever the request comes to /admin meaning https://shopnow.com/admin
+
+then the request should go to admin service
+
+-------------------------------------------------
 
 Ingress = Ingress Controller + Ingress Object 
 
@@ -11,9 +65,14 @@ Browser (User / Client) -> flipkart.com -> DNS name gets resolved -> route53 -> 
 -> EKS Cluster (Ingress Controllers) -> Ingress Resource / File -> Based on the Ingress file the request is sent to the specific service -> pod
 
 Some popular controllers include:
+
 a.) Ingress-Nginx (Open-Source) Controller for Kubernetes using NGINX as a reverse proxy and load balancer for any Kubernetes Cluster
+
 b.) AWS Load Balancer Controller to manage Application Load Balancers for EKS
-c.) AKS Application Gateway Ingress Controller that configures the Azure Application Gateway for AKS
+
+c.) AKS Application Gateway Ingress Controller that configures the Azure Application 
+Gateway for AKS
+
 d.) Nginx-Ingress (Enterprise managed by Nginx company)
 
 
@@ -38,7 +97,7 @@ handson for Ingress Nginx Controller:
 - Once this is installed, copy the AWS Network Load Balancer DNS for future reference, using the command:
 	- kubectl get services -n ingress-nginx // if installed correctly then it will print the AWS NLB DNS in the external IP
 	
-- Analyse the sample app in: 
+- Analyze the sample app in: 
 	- manifests\sample-app-for-ingress-nginx.yaml
 	
 - This file has all the kubernetes objects required for running 2 application / micro-services on kubernetes

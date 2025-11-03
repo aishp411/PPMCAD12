@@ -1,18 +1,15 @@
+---------------------------
+Kubernetes Training Program
+---------------------------
+
+-------------
+Session 5:
+-------------
+
 HELM:
 ----------
 
 Helm is a package manager for Kubernetes. It allows you to define, install, and upgrade even the most complex Kubernetes applications.
-
-from our exp:
-
-We installed AWS Load Balancer Controller:
-
-- We executed a commands and the controller was up and running with following objects in Kubernetes:
-    - deployments
-    - services
-    - configmaps
-    - secrets
-    - rbac - clusterrole, clusterrolebindings, serviceaccounts
 
 Benefits of using Helm:
 - Simplifies application deployment
@@ -112,6 +109,8 @@ Best Practices
     - Use CI/CD pipelines for chart testing and publishing
     - Follow Helm's chart best practices guide - share this as well
 
+
+
 ArgoCD Overview:
 ----------------
 
@@ -165,62 +164,3 @@ spec:
     automated:
       prune: true
       selfHeal: true
-
-
-
-Comprehensive CI/CD Guide for Microservices on Kubernetes:
-----------------------------------------------------------
-
-Application Architecture:
-  Multi-service Architecture:
-    Frontend service (Node.js)
-    Backend service (Node.js)
-    MongoDB database
-
-The sample code base for this placed at: https://github.com/aryanm12/k8s-cicd-demo
-
-
-Prerequisites:
-  - Kubernetes cluster - > EKS
-  - Jenkins server as our CICD tool
-  - Container registry ECR -  Since we are working with AWS env
-
-
-We will now perform the build & deployment (CICD) of 2 Sample Microservices in Kubernetes Cluster using following approaches:
-a.) Standard Approach:
-    CI - docker + ECR + Jenkins 
-    CD - kubectl + Jenkins
-b.) Helm Based:
-    CI - docker + ECR + Jenkins
-    CD - Helm  + Jenkins
-
-So the CI process is common in both approaches, so Let's begin with the CI process.
-
-- Deploy & Install Jenkins:
-    - Install Java 17
-    - Install Jenkins along with the necessary plugins
-        - Installation Guide for debian/ubuntu: https://pkg.jenkins.io/debian-stable/
-    - Run the script "jenkins-node-binaries-installation.sh" shared here to install all the required binaries in Jenkins to run the pipelines
-    - Additionally Install following plugins:
-        - AWS Credentials
-        - Pipeline: AWS Steps
-
-- Configure AWS credentials in Jenkins:
-    - Go to "Manage Jenkins" -> "Credentials" -> System -> Global credentials (unrestricted)
-    - Click on "Add Credentials"
-        a.) AWS Credentials:
-            Kind: AWS Credentials
-            - ID: aws-credentials
-            - Access Key ID: (your AWS access key)
-            - Secret Access Key: (your AWS secret key)
-
-- Create a Docker Registry in AWS ECR for Frontend and Backend images: demo-frontend and demo-backend
-
-- Create CI pipelines for FE and BE
-
-- Create CD Pipelines for FE, BE and MongoDB using kubectl
-
-- Create CD Pipelines for FE, BE and MongoDb using Helm Chart
-
-
-

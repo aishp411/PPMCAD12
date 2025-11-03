@@ -28,7 +28,7 @@ Step 1: Create an IAM role
 
 Step 2: Get the Amazon EBS CSI driver
 
-- Install via Helm or AWS EKS Managed Add-Ons (There is some ongoing issues with it)
+- Install via Helm or AWS EKS Managed Add-Ons
 
 - Helm Steps are given below:
 
