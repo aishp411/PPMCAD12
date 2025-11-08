@@ -1,4 +1,6 @@
 .terraform
 !.terraform.tf
+.terraform.lock.hcl
+terraform.tfstate
 .zip
 .vscode
