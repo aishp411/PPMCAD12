@@ -4,3 +4,4 @@ subnet_id_demo     = "subnet-338383"
 tags_demo = {
   Name = "my-redhat-instance1"
 }
+key_pair = "aryan"
