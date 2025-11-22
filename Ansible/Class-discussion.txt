@@ -1,0 +1,165 @@
+Pre Docker ERA:
+
+Anything that we use to run, we would either run the software on VMs or Physical Machines..
+
+I have to run a website...
+
+that website requires..
+
+3 VMs.. on all those 30 VMS..
+
+we need Nginx web server, nginx web servers would have certain configurations like: conf.d/vhost.conf
+
+these files used to keep rules... w.r.t if the request is /api then send it to the java service running in the server
+
+java with a certain version should be installed
+
+-----
+
+OS related configurations... 
+
+- I need 5 users, 1 names deploy user etc. 
+- fstab
+
+-----
+
+shell scripts.. 
+
+---
+
+shell scripts or any other script are by default not idempotent
+
+meaning: if I execute the shell script 1st time... it will run and install and configure everything... but 2nd time it will..
+
+---
+
+CM tools: Puppet came... Chef... Ansible..
+
+-- 1st principal it followed was idempotency, standardization, configuration as code was achieved 
+
+----
+
+We are running a website on AWS... in a trad way..
+
+meaning I need 10 EC2 servers and load balanced by a ALB..
+
+nginx webserver with its conf files, java / python / nodejs, any OS configurations...
+
+----
+
+We will write TF code to provision 10 EC2 and 1 ALB
+
+---
+
+Then we will write Ansible Playbooks.. for configuring those 10 EC2s..
+
+----
+
+User Data: is provided by AWS EC2, where in you specify certain linux commands/ shell scripts which gets executed on the EC2 server once it is booted..
+
+Controller (specify the conf) -> Target Nodes (syncs the conf from the controller)
+
+---
+
+Can we not do all of these things via shell scripts?
+
+-- Sort ans: Yes, you can... but with shell scripts it is very difficult achieve features like idempotency, framework to manage configuration..
+
+-----------------------
+
+Puppet & Chef: Required agents on the target servers which they manage 
+
+Ansible: Agentless, it works on the principles of key exchanges / user-pass in linux and works on port 22... and in windows winrm port
+
+
+----------------
+
+
+Terraform: used for creating the services on cloud
+
+Boto3: Python Library which is used for creating the services on AWS
+
+Ansible: used for configuration of VMs, installing s/w, adding files
+
+------
+
+Control Node: Large instance... 32 Core and 120 GB RAM 
+
+run it in chunks... like in a batch of 50 servers
+
+--- if I have to configure ansible control node to run parallel on 500 managed nodes, what is the solution...
+
+----
+
+Ansible Role is kind of same as Terraform Modules..
+
+
+------
+
+
+Java, Tomcat, NodeJS, Nginx, Apache, ElasticSearch... etc.
+
+---
+
+you have written ansible playbooks to install Java, Tomcat, NodeJS, Nginx, Apache, ElasticSearch on different servers...
+
+you performed all these activities for team A on their 10 servers...
+
+You will start creating Ansible Roles for it:
+
+- Java
+- Tomcat
+- NodeJS
+- Nginx etc.
+
+then for team A, you will create a playbook and call all the roles created above in it....
+
+
+----
+
+now team B comes and asks you that we need Java, Tomcat & Nginx on our 50 servers by using ansible...
+
+you will re-create the playbook for these 50 servers...
+
+
+in this playbook, again we will write the tasks for installing java, tomcat and nginx... 
+
+so the code is becoming redundant and we are always reinventing the wheel..
+----
+
+if I had to reuse the same java, tomcat and nginx playbooks written earlier then what is the way?
+
+-- Ansible Role
+
+
+---
+
+you will create a playbook for team B and call 3 roles in it: java, tomcat and nginx
+
+
+----
+
+Add Anisble gather facts link
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

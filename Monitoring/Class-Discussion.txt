@@ -1,0 +1,18 @@
+Observability: 
+
+1.) Monitoring
+2.) Central Logging
+3.) Tracing / Application Performance Monitoring (APM)
+
+
+Monitoring:
+Standard metrics based monitoring of CPU, Memory, Storage / Disk, URL Monitoring
+
+
+Central Logging:
+
+
+
+APM:
+Behaviour of Application
+request and response of the Application

@@ -29,3 +29,15 @@ ansible-playbook -i inventory playbook.yml --tags redhat
 # To check syntax first:
 
 ansible-playbook -i inventory playbook.yml --check
+
+
+
+---------------------------
+
+
+
+
+
+ansible-playbook -i inventory-teamA teamA-playbook.yml
+
+ansible-playbook -i inventory-teamB teamB-playbook.yml

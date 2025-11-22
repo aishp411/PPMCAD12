@@ -46,8 +46,6 @@
         name: nginx
         state: restarted
 
-
-
  - name: install nginx on RedHat
    hosts: RedHat_Servers
    vars:

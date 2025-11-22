@@ -5,3 +5,5 @@
    gather_facts: yes
    roles:
      - nginx
+     - java
+     - tomcat
