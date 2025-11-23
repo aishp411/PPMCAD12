@@ -1,18 +1,78 @@
 Observability: 
 
 1.) Monitoring
-2.) Central Logging
+2.) Centralized Logging
 3.) Tracing / Application Performance Monitoring (APM)
 
 
 Monitoring:
-Standard metrics based monitoring of CPU, Memory, Storage / Disk, URL Monitoring
+Standard metrics based monitoring of CPU, Memory, Storage / Disk, URL Monitoring (Health Check monitoring)
+
+e.g.: Nagios or Zabbix or icinga 
+
+----
+
+problem statement:
+
+my app stopped working or is very slow...
+your app is running on serverA, I will check the CPU consumption ("top / htop") of the server... I will check the memory consumption (free -m/h), then I will if the storage is completely filled or not (df -h)
 
 
-Central Logging:
+These tools report you the current CPU, Memory consumption... and you can defined alerts in them... saying that if my CPU consumption crosses 80% send me an alert
+
+----
+
+Open Source Tools: Nagios, Zabbix
+Enterprise Tools: AppDynamics, NewRelic, Dynatrace, DataDog, Splunk
+Cloud Native Solutions: CloudWatch, Azure Monitor 
 
 
+Centralized Logging:
+Pushing all the application or server logs to a centralized location... to track any anything which is logged into the log file
+
+---
+
+We start reading the log files, 1st the OS log files and then the application logs files... e.g. catalina.out, error.log, app.log
+
+--
+
+My App is running on 10 servers.. .and if it is slow... then I will have to ssh into all 10 servers and read 4/5 log files in all of them...
+
+---
+
+Let us have a system which will continuously sync all the logs which I specify from all the servers to a central place and then I can visualize all the log files from a dashboard which can read from that central place..
+
+---
+
+I have 10 servers...
+
+Elastic Stack (ELK): ElasticSearch, Kibana, Filebeat
+
+on all the servers I will install filebeat... this will read log files from each server and sync them to ElasticSearch, and now from Kibana can query all the logs directly from ElasticSearch and show them in a central dashboard
+
+
+OpenSource: Elastic Stack
+Enterprise: Splunk, AppDynamics, NewRelic, Dynatrace, DataDog
+Cloud Native Solutions: CloudWatch Logs, Azure Monitor Log Anatics
 
 APM:
 Behaviour of Application
 request and response of the Application
+each request processing time
+how much time my app takes to interact with databases
+
+Enterprise: AppDynamics, NewRelic
+AWS: AWS Xray
+Azure: Application Insights
+
+-----
+
+if I am doing the monitoring via Nagios:
+
+it will check the CPU now, 12:21, it will report that CPU is 30% and exit
+
+---
+
+Prometheus:
+
+it will create an entry inside its database: VM1:12:21:30%, VM1:12:22:32%
