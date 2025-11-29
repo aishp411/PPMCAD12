@@ -17,49 +17,64 @@ I have to deploy an ecommerce site in AWS
 -> AWS RDS (Database)
 -> CloudWatch (Monitoring)
 
-- First there should be a Dev env for dev team wherein they continuous deploy and test their changes
+Environment Provisioning Strategy without Infrastructure as code:
+-----------------------------------------------------------------
 
--> First time, we do everything manually and make sure to capture each and every step and capture the screenshot as well, thus create a runbook or playbook
+You must deploy this e-commerce platform across multiple environments:
 
--> Identify the chunks which can be automated via script
+1.) First the deployment is fully manual to learn all required steps in the "Dev" environments
+- Capture every configuration step and screenshot -> build a Runbook / Playbook.
+- Identify which tasks can later be automated using scripts.
 
-- 2nd for QA Team there should a QA team
+2.) Then the deployment is promoted to the QA Environment
+- Again manually using the same runbook as created above
 
-- 3rd Staging / UAT for pre-prod changes
+and then to further environments
 
-- Finally the production env
+These steps are entirely manual and requires careful execution and may have inconsistencies.
 
------------
+Environment Provisioning Strategy with simple Automation:
+---------------------------------------------------------
 
-Windows - Batch
-Linux - Shell Scripting
+Some chunks of small repeatable tasks are identified and then automated via writing shell or batch / powershell scripts
 
------------
+Issues With Only Using Scripts (Shell/Batch/PowerShell):
 
-Infrastructure as Code:
------------------------
+- No State Awareness: Scripts don't know what already exists which leads to duplicate resources, failures, and drift.
+
+- Not Idempotent: Running the same script twice can break things.
+
+- No Environment Consistency: Dev, QA, Staging, Prod become slightly different over time.
+
+- No Plan or Preview: Scripts run blindly as there is no option of dry-run.
+
+- Poor Dependency Handling: Scripts require manual ordering, no implicit dependency management.
+
+- Hard to Scale & Maintain: As infra grows, scripts become large, complex, error-prone.
+
+Introducing Infrastructure as Code (IaC):
+-----------------------------------------
+
+IaC allows you to define your infrastructure in a declarative format, enabling:
+
+- Repeatability
+- Version-controlled infrastructure
+- Automated deployments
+- Zero manual drift
+- Multi-environment consistency
+
+Popular IAC tools:
+
 AWS -> CloudFormation
 Azure -> ARM template, Biceps
 OpenSource -> Terraform, Pulumi (Requires extensive programming capability)
 
-Configuration Management:
--------------------------
-Ansible
-Chef
-Puppet
+Why Terraform?
+--------------
 
-HashiCorp - Open Source product known as Terraform
+- It is vendor-agnostic (works with AWS, Azure, GCP, VMware, Kubernetes, etc.).
+- Uses HCL (HashiCorp Configuration Language) - simple, declarative, human-readable.
+- Large open-source community contributing modules and best practices.
+- Easy to learn because you describe the infrastructure instead of writing complex logic.
 
-Terraform is vendor agnostic and is the most appropriate tool for Infra provisioning vi IAC
-
-You write the code in its own HCL - HashiCorp Configuration Language
-
-This was / is by far the easiest way to code without knowing how to write in complex languages....
-
-you can simply state the configuration which you desire...
-
-I can state:
-
-Create VPC - with its cidr range....
-
-Entire Cloud experts started contributing in Terraform Open Source Code Base...
+Terraform is currently the industry’s most widely adopted IaC tool for provisioning cloud infrastructure.

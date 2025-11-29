@@ -7,91 +7,156 @@ Session 2:
 -------------
 
 
-Problem Statement:
+Problem Statement 1 (understanding of Terraform Module):
+--------------------------------------------------------
 
-I have to provision following services in AWS:
+You need to provision the following AWS resources using Terraform:
+- 1 VPC
+- 2 Public Subnets
+- 2 Private Subnets
+- 1 Application Load Balancer (ALB) with target groups
+- 1 Auto Scaling Group (ASG) with min/max capacity 2–5
 
-1.) 1 VPC, 2 Public Subnet, 2 Private Subnet
-2.) 1 ALB with target groups
-3.) Auto-scaling group with min & max 2-5
+These resources must be created for 4 environments:
+- dev
+- qa
+- staging
+- prod
 
-I have to do everything via Terraform and these set of services needs to be created in 4 envs... dev, qa, staging and Prod.
+Key question to think about:
+- Will you create one reusable Terraform codebase with variables, loops and conditions to handle all environments, or separate code per environment?
 
-Will you create a single set of TF code with variables, loops and conditions?
+Answer: One reusable Terraform codebase — NOT separate code per environment
+You should always create ONE reusable Terraform codebase and parameterize it using:
+- variables.tf
+- *.tfvars per environment (dev, qa, staging, prod)
+- for_each / count loops
+- conditionals
+- Terraform modules
+
+--------------------------------------------------------------------------
+
+Running Terraform for Multiple Environments (Local State Example)
+-----------------------------------------------------------------
+
+Assume your code is in: C:\PPMCAD12\Terraform\session2\sample-tf
 
 
-My code is ready, I will now provision my dev env:
-
+1.) First you have to provision the dev environment and you execute:
 
 cd C:\PPMCAD12\Terraform\session2\sample-tf
 
 terraform init
-terraform plan --var-file=dev.tfvars
+terraform plan  --var-file=dev.tfvars
 terraform apply --var-file=dev.tfvars
 
+- After terraform apply, a file named terraform.tfstate is created.
+- This state file which is created locally keeps a record of all resources Terraform has created/managed for that environment.
 
-Now dev is ready...
 
-terraform.tfstate file gets created
-
-this file keeps all the record of resources generated for the dev
-
-Now we have to do the same for QA:
+2.) Now you have to provision the qa environment (same code, different variables) and you execute:
 
 cd C:\PPMCAD12\Terraform\session2\sample-tf
 
 terraform init
-terraform plan --var-file=qa.tfvars
+terraform plan  --var-file=qa.tfvars
 terraform apply --var-file=qa.tfvars
 
-
-/// provide step by step guide to create and use a module..
-
-for local testing and for production env
-
-// activity guide for terraform
+- After running terraform apply for dev env, state file contains dev resources
+- Running terraform apply for qa again from the same folder will overwrite the same terraform.tfstate file
+- Terraform can no longer track what belongs to dev vs qa
+- You lose state isolation
 
 
--- 
+Correct Best Practice:
+----------------------
+- Each environment must have its own state, completely isolated from others.
+- Option 1: Separate folders per environment (simple, widely used)
+envs/
+  dev/
+    dev.tfvars
+    main.tf
+  qa/
+    qa.tfvars
+    main.tf
 
-Problem Statement 2:
+- Option 2: Same folder, but separate remote state backends (advanced), You keep a single folder, but use different backend keys:
 
-Dev 1 has a TF code to provision following services in AWS:
+backend-dev.tf:
+  backend "s3" {
+    bucket         = "buckt-name"
+    key            = "terraform/dev.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-lock"
+  }
 
-1.) 1 VPC, 2 Public Subnet, 2 Private Subnet
-2.) 1 ALB with target groups
-3.) Auto-scaling group with min & max 2-5
+backend-qa.tf:
+  backend "s3" {
+    bucket         = "buckt-name"
+    key            = "terraform/qa.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-lock"
+  }
 
-Dev1 created a folder, named "dev"
+- When switching environments:
+terraform init -backend-config=backend-dev.tf
+terraform apply --var-file=dev.tfvars
 
-Go inside that folder... and executed TF commands
+or
 
-terraform init (initialized a remote backend state)
-a link between dev1 local tfstate file and the remote state file gets established
+terraform init -backend-config=backend-qa.tf
+terraform apply --var-file=qa.tfvars
 
-e.g.: AWS S3 bucket, Azure blobs, GCP buckets
+- This achieves: 
+same code
+separate state
+no conflict
 
-terraform apply
+--------------------------------------------------------------------------
 
-A file named as "terraform.tfstate" will get generated in their local directory
+Problem Statement 2 (Remote State & Collaboration):
+---------------------------------------------------
 
----Dev1 got busy in something else
+Scenario 1 - Terraform collaboration via Terraform Remote state:
+How multiple developers can work with same terraform code having remote state backend easily.
 
-Dev 2, now has to take the TF code (clone the TF code) and make some changes in it and again apply
+Dev1 has written Terraform code to provision:
+- 1 VPC, 2 public subnets, 2 private subnets
+- 1 ALB with target groups
+- 1 ASG with min/max 2-5
+- The Terraform code also have remote state backend to store the remote state on S3 bucket
+- Dev1 executes:
+    terraform init
+- This initializes a remote backend for state
+- A link is created between Dev1’s local Terraform working directory and the remote terraform.tfstate in S3 bucket
+- Then Dev1 runs:
+    terraform apply
+- Resources are created in AWS.
+- Dev1 gets busy and steps away.
 
-this person...
+Dev2 Steps in to make certain enhancements in the terraform code and further to the actual AWS services
+- Clone the Terraform code:
+    git clone <git-url-with-tf-code>
+- Make required changes in the .tf files
+- Run Terraform:
+# Downloads providers and connects to the same remote backend which was created when Dev1 executed terraform apply
+    terraform init
+# Applies changes based on the same remote state
+    terraform apply
 
-1.) git clone <git-url>-<tf-code>
-2.) cd <tf-code>
-3.) make the changes in the .tf files (whatever the changes are req)
-4.) run TF commands:
-    - tf init (remote backend state file is synced to Dev2's local)
-    - tf apply 
 
-Possible answers:
-- conflict of state - correct
-- tf apply will fail... 
+Scenario 2 - Requirement of Terraform State Lock: 
+Things that can happen when multiple developers work on the same terraform code at the same time or near same time.
 
-How does TF knows if the resource is created or not?
--
-
+- There may be state conflicts if 2 developers execute terraform apply at the same time.
+- To handle this situation, terraform has the provision of "terraform state locking"
+- State locking is Terraform's mechanism to prevent two developers or two processes from modifying the same state file at the same time and thus stopping the conflict.
+- Think of it as Terraform saying: "Before I modify the state file, I must acquire a lock. No one else can write to the state file until I finish."
+- State Locking via DynamoDB (AWS S3 Backend): Most common and recommended approach when using Terraform with AWS.
+- Example backend configuration
+  backend "s3" {
+    bucket         = "buckt-name"
+    key            = "terraform/qa.tfstate"
+    region         = "us-east-1"
+    dynamodb_table = "terraform-lock"
+  }

@@ -1,0 +1,115 @@
+---------------------------
+AWS Training Program
+---------------------------
+
+-------------
+Session 1:
+-------------
+
+Very Important Point:
+- All resources inside the same VPC can communicate with each other using private IPs, regardless of subnet (public/private).
+
+1.) Understanding Private IP Address Ranges
+
+These three blocks are reserved for private networking and are not routable on the public internet.
+Used inside: VPCs, on-prem networks, corporate LANs, Kubernetes clusters, etc.
+
+Private IP Blocks (RFC 1918)
+Range	Size	Notes
+10.0.0.0 – 10.255.255.255	/8	Most commonly used in AWS VPCs
+172.16.0.0 – 172.31.255.255	/12	AWS default VPC uses 172.31.0.0/16
+192.168.0.0 – 192.168.255.255	/16	Used in home networks, routers
+
+2.) Choosing VPC IP Range (CIDR)
+
+Typical CIDR sizes:
+
+/16 → 65,536 IPs
+/18 → 16,384 IPs
+/20 → 4,096 IPs
+
+Example VPC: 10.0.0.0/16
+
+Usable range for in the above VPC:
+First usable IP: 10.0.0.1
+Last usable IP: 10.0.255.255
+
+AWS automatically reserves 5 IPs per subnet:
+Network address
+Broadcast address
+3 reserved AWS router addresses
+
+3.) Creating Subnets Inside a VPC
+
+Example: create a private subnet:
+
+10.0.0.0/20
+Total IPs -> 4096
+First usable IP -> 10.0.0.2
+Last usable IP -> 10.0.15.254
+
+4.) Planning IP Ranges Properly
+
+In organizations, IP planning is critical.
+
+Tools used:
+- IPAM (IP Address Management) tools
+- Excel sheets in smaller teams
+- Well-defined IP blocks per account/environment
+
+Example:
+10.0.30.0/18 – allocated for Analytics VPC
+10.0.50.0/18 – allocated for Security Tools
+
+This prevents:
+- Overlapping CIDRs
+- Conflicts in multi-account networks
+- Issues during Transit Gateway or VPC peering
+
+5.) Bastion Host SSH Workflow
+
+- A Bastion Host (also called a Jump Server) is a secure entry point into a private network.
+- It is used when your application servers are inside private subnets and do not have public IPs.
+
+What is a Bastion Host?
+- A small EC2 instance in a public subnet
+- Has a public IP address
+- Accessible only from trusted IP ranges (your office/VPN) via restricted security group
+- Used exclusively for SSH/administrative access
+- Think of it as a security gateway for private servers.
+
+Steps to connect to a ec2 instance in private subnet via Bastion Host:
+
+Step 1: SSH into Bastion using public IP
+ssh ubuntu@<public_ip_of_bastion>
+
+Step 2: SSH into private servers from inside the VPC
+ssh ubuntu@<private_ip_of_target_server>
+
+This pattern is used in private subnets without public exposure.
+
+6.) RDS Endpoints (Writer & Reader)
+
+Amazon RDS provides different endpoints depending on the type of workload:
+
+- Primary / Writer Endpoint
+    Handles all write operations
+    Also supports read/write traffic
+    Always points to the current primary instance
+    The endpoint remains the same even if failover happens
+
+    Example: writer.<cluster>.rds.amazonaws.com
+
+- Reader Endpoint (Read-Only Load Balancing)
+    Used only for read queries
+    Automatically distributes connections across all read replicas
+    If replicas increase or decrease, reader endpoint updates automatically
+    Helps reduce load on the primary database
+
+    Example: reader.<cluster>.rds.amazonaws.com 
+
+- Why This Matters
+    Improved performance: read traffic is offloaded from the primary
+    High availability: failover happens gracefully
+    Scaling: add more read replicas without changing application config
+    Safer architecture: separates critical writes from heavy reads
