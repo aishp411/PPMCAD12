@@ -1,0 +1,286 @@
+---------------------------
+AWS Training Program
+---------------------------
+
+-----------
+Session 2:
+-----------
+
+-----------
+CloudTrail:
+-----------
+
+AWS CloudTrail is a governance, compliance, and auditing service that records all API activity inside your AWS account.
+
+What it captures:
+- Who performed an action (IAM user/role)
+- On which service (EC2, S3, IAM, VPC, etc.)
+- From where (IAM identity, IP address)
+- When (timestamp)
+- What API was executed (RunInstances, CreateBucket, DeleteUser, etc.)
+
+Use cases:
+- Security audits
+- Investigating unauthorized access
+- Compliance reporting
+- Change tracking
+
+---------
+Route 53:
+---------
+
+AWS Route 53 is a highly available, scalable DNS service.
+
+Key Capability:
+It maps human-friendly DNS names to AWS resources like: ALB, CloudFront, EC2 Public IP, S3 static website, External services
+
+Example:
+herovired.com -> A Record -> ALB
+
+1.) Route 53 Hosted Zones:
+
+- Public Hosted Zone:
+Used for domains accessible from the public internet.
+
+Example:
+www.company.com -> CloudFront
+
+- Private Hosted Zone:
+Works similar to CoreDNS inside Kubernetes, but within a VPC.
+
+CoreDNS in K8S:
+servicename.namespace.svc.cluster.local -> Cluster IP (K8s)
+
+Private Hosted Zone:
+app.internal.company.com -> Private IP of EC2/RDS inside the VPC
+
+Use case: Naming internal servers using FQDN instead of IPs.
+
+2.) DNS Record Types:
+
+A Record (Address Record):
+Maps domain -> IPv4 address
+Example:
+google.com -> 47.7.37.23
+
+CNAME (Canonical Name):
+Maps domain -> another domain
+Example:
+www.google.com -> google.com
+
+4.) Problem Statement Discussion during the session:
+
+- Domain ownership shifted to Cloudflare (registrar)
+- Created a CNAME or A (ALIAS) record in Cloudflare pointing domain -> CloudFront
+
+This means:
+abc.com -> Cloudflare DNS -> CloudFront -> S3/ALB/EC2
+
+------------------------------------
+FinOps (Cloud Financial Management):
+------------------------------------
+
+Cloud adoption often increases cost -> FinOps ensures visibility, accountability, and optimization.
+
+Use mandatory tagging on all resources, e.g.: 
+
+Name: app1-backend
+Environment: dev/test/prod
+Cost-Centre: IT-OPS
+Team-Name: Platform
+Owner: name@abc.com
+
+Why tags matter?
+- Per-team cost visibility
+- Automated cost alerts
+- Showback/chargeback
+
+General Cost Optimization steps:
+- Right-size EC2, RDS
+- Prefer graviton instances
+- Use Auto Scaling with smaller baseline instances
+- Ensure S3 lifecycle policies (move to IA/Glacier)
+- Ensure CloudWatch Logs have retention & lifecycle rules
+
+
+--------------------------
+Advantages of using Cloud:
+--------------------------
+
+- No long-term datacenter hardware, cooling, UPS, or staffing
+- Managed services (RDS, S3, DynamoDB, Lambda)
+- Global deployments in minutes
+- Auto-scaling and elasticity
+- Pay-as-you-go pricing
+- Much faster development-to-production pipeline
+
+
+----------------------------------------------
+Architecture Scenario: Web Application Design:
+----------------------------------------------
+
+Requirements:
+High availability, secure, cost-effective, global users
+Apply AWS Well-Architected Pillars.
+
+Answer 1 - Static Website:
+--------------------------
+
+Architecture:
+S3 bucket (static website hosting enabled)
+Bucket gives random Amazon URL
+Create CNAME record in Route 53:
+    www.ppmcad12.com -> S3 website endpoint
+Performance Optimization: Users in the US accessing S3 in Mumbai -> high latency.
+Solution: CloudFront CDN
+    Origin: S3 bucket
+    Cached globally
+    Much faster worldwide
+
+
+Answer 2 - Dynamic Application:
+-------------------------------
+
+Network:
+1 VPC
+2 Public + 2 Private Subnets on Multi-AZ design
+
+IAM:
+Least privilege policies
+Dedicated IAM roles for compute services
+
+Application Layer:
+ALB in Public Subnet
+HTTPS listener with ACM certificate
+EC2 (ASG) or EKS (HPA) in private subnets
+Deploy across multi-AZ
+EBS volumes encrypted with KMS
+Strict Security Groups
+
+Caching:
+ElastiCache Redis (private subnets)
+
+Database:
+RDS Multi-AZ
+Read replicas for read-heavy workloads
+Graviton instance types
+KMS encryption enabled
+
+Storage:
+S3 bucket for objects
+Lifecycle transitions: S3 Standard -> IA -> Glacier
+
+CDN:
+CloudFront distribution with origin -> ALB
+
+Route 53:
+Public Hosted Zone: demo01-hvd.com
+CNAME -> CloudFront DNS
+
+Monitoring:
+CloudWatch dashboards
+CloudWatch logs
+Alerts + metrics
+
+Deployments:
+CI/CD pipelines
+
+
+---------------------------------------------------------------
+Problem Statement: Connecting application running on EC2 to S3
+---------------------------------------------------------------
+
+1.) Without IAM Roles (Bad Practice)
+- Using AWS CLI on EC2
+Run aws configure
+Use long-term access key & secret
+
+Issues:
+Keys stored on EC2 -> security risk
+Long-lived credentials -> dangerous
+
+- Hardcoding in Application Code
+Keys embedded in code / Git
+
+Issues:
+Immediate AWS account compromise if leaked
+
+2.) IAM Role (Best Practice)
+
+Create IAM role:
+Trusted entity: EC2
+Attach S3 read/write policy
+Attach role to EC2 instance
+
+Now application uses:
+Instance Metadata Service (IMDS)
+Temporary credentials
+Auto-rotated, short-lived
+No keys needed.
+
+-----------------------------------------------
+Cross-Account IAM Role (Account A -> Account B)
+-----------------------------------------------
+
+Scenario:
+IAM users exist only in Account A
+Account B must not have users (security restriction)
+A user in Account A must perform actions in Account B (e.g., create S3 bucket)
+
+This can be achieved via setting up Cross Account IAM role:
+-----------------------------------------------------------
+
+Step 1.) Allow Account A to Assume Role in Account B
+
+In Account B (Resource Account):
+Create Role -> Trusted Entity: AWS Account
+Trust policy:
+
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::<Account_A_ID>:root"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+
+This means any IAM user/role in Account A can assume this role.
+
+Restrict to specific IAM group
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+        "AWS": "arn:aws:iam::<Account_A_ID>:group/AccountB-Assume-group"
+      },
+      "Action": "sts:AssumeRole"
+    }
+  ]
+}
+
+Step 2.) In Account A (Identity Account):
+
+User gets policy:
+
+{
+    "Version": "2012-10-17",
+    "Statement": {
+        "Effect": "Allow",
+        "Action": "sts:AssumeRole",
+        "Resource": "arn:aws:iam::<Account_B_ID>:role/<Role_Name>"
+    }
+}
+
+
+Result:
+
+User logs into Account A
+Assumes role in Account B
+Performs actions in Account B without needing an IAM user there

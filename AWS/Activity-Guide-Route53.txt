@@ -1,0 +1,89 @@
+-------------------------------------------------------------
+Create a Public Hosted Zone in Route 53 + A and CNAME Records
+-------------------------------------------------------------
+
+Objective: Create a production-ready Public Hosted Zone, add A Records (IPv4) and CNAME Records, understand their purpose, and test DNS resolution.
+
+Prerequisites:
+- A registered domain name (bought from Route 53 or any external registrar)
+- IAM user/role with permissions: AmazonRoute53FullAccess
+
+Steps:
+
+1.) Create a Public Hosted Zone
+
+Console Navigation:
+Route 53 -> Hosted Zones -> Create Hosted Zone
+
+Configuration:
+Domain Name: yourdomain.com
+Type: Public Hosted Zone
+VPC Association: Not required for public zones
+
+What this step means:
+- A Public Hosted Zone is used for domains that must be resolvable on the public internet.
+- AWS automatically creates NS and SOA records.
+- NS (Name Server) records tell the world which Route 53 servers host your domain.
+- SOA (Start of Authority) defines DNS metadata (TTL, refresh time, etc.).
+
+Important Step After Creation:
+- If your domain is NOT purchased in AWS Route 53 (e.g., GoDaddy), update the domain's NS records at the registrar -> set to Route 53's NS values.
+- Without this, DNS will not work globally.
+
+2.) Create an A Record (IPv4)
+
+Scenario:
+Point your domain yourdomain.com -> to a web server or Load Balancer.
+
+Console Navigation:
+Inside the Hosted Zone -> Create Record
+Configuration:
+Record Name:
+(blank) -> for root domain yourdomain.com
+Record Type: A – IPv4 address
+Value: (Choose one)
+Public EC2 IP -> 13.x.x.x
+or
+ALB DNS name -> Select "Alias to Application Load Balancer"
+Routing Policy: Simple (default)
+Record TTL: 300 seconds (default)
+
+- What this step means:
+An A record maps a domain name -> IPv4 address.
+If you choose Alias, AWS automatically tracks the target's IP (ALB, CloudFront, S3 website).
+
+Example outcomes:
+yourdomain.com -> Public EC2 / ALB
+
+
+3.) Create a CNAME Record
+
+Scenario:
+You want:
+www.yourdomain.com -> points to yourdomain.com
+
+Console Navigation:
+Hosted Zone -> Create Record
+
+Configuration:
+Record Name: www (this creates www.yourdomain.com)
+Type: CNAME
+Value: yourdomain.com
+
+TTL: 300 seconds
+
+- What this step means:
+CNAME maps one domain -> another domain.
+It cannot point to an IP directly (that's A record).
+
+4.) Test Your Records
+
+Methods to verify DNS:
+
+- Using Local Machine (Windows/Linux/macOS)
+nslookup yourdomain.com
+nslookup www.yourdomain.com
+
+- Using dig (Linux/macOS/CloudShell)
+dig yourdomain.com
+dig www.yourdomain.com

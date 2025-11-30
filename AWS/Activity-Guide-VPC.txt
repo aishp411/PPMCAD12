@@ -1,0 +1,148 @@
+------------------------------------------------
+Create a VPC with 2 Public and 2 Private Subnets
+------------------------------------------------
+
+Objective: Create a production-ready Virtual Private Cloud (VPC) with:
+- VPC CIDR: 10.0.0.0/16
+- 2 Public Subnets (AZ-a, AZ-b)
+- 2 Private Subnets (AZ-a, AZ-b)
+- Internet Gateway (IGW)
+- NAT Gateway
+- Public & Private Route Tables
+- Understand default routes and why they exist
+
+Prerequisites:
+- AWS Account
+- IAM user/role with permissions: AmazonVPCFullAccess (or equivalent)
+- Access to AWS Console
+
+Steps:
+
+1.) Create the VPC
+Console Navigation:
+VPC -> Your VPCs -> Create VPC
+
+- Configuration:
+VPC Name: Prod-VPC (Or Any Other as per your choice)
+IPv4 CIDR block: 10.0.0.0/16 (Or any other CIDR range as per your requirement)
+DNS Hostnames: Enable
+DNS Resolution: Enable
+
+- What this step means:
+A VPC with /16 gives you 65,536 IPs, enough for multiple subnets.
+DNS resolution/hostnames are required for services like:
+    NAT Gateway DNS lookup
+    EC2 hostname assignment
+    RDS DNS endpoints
+
+2.) Create Two Public Subnets
+Console:
+VPC -> Subnets -> Create Subnet
+
+Create the following:
+- Public Subnet 1:
+Subnet Name: Public-Subnet-A
+CIDR: 10.0.1.0/24 (If the VPC above is different then provide the appropriate range)
+AZ: ap-southeast-1a (As per your region and AZ)
+Public IP: Auto-assign (Enabled)
+
+- Public Subnet 2:
+Subnet Name: Public-Subnet-B
+CIDR: 10.0.2.0/24 (If the VPC above is different then provide the appropriate range)
+AZ: ap-southeast-1b (As per your region and AZ, make sure that this is a separate AZ as compared to Public Subnet 1)
+Public IP: Auto-assign (Enabled)
+
+- What this step means:
+Public subnets must have Auto-Assign Public IP enabled, otherwise EC2 instances wont get the Public IPs
+Splitting across AZs ensures high availability.
+
+3.) Create Two Private Subnets
+Console:
+VPC -> Subnets -> Create Subnet
+
+Create the following:
+- Private Subnet 1:
+Subnet Name: Private-Subnet-A
+CIDR: 10.0.3.0/24 (If the VPC above is different then provide the appropriate range)
+AZ: ap-southeast-1a (As per your region and AZ)
+Private IP: Auto-assign (Enabled)
+
+- Private Subnet 2:
+Subnet Name: Private-Subnet-B
+CIDR: 10.0.4.0/24 (If the VPC above is different then provide the appropriate range)
+AZ: ap-southeast-1b (As per your region and AZ, make sure that this is a separate AZ as compared to Private Subnet 1)
+Private IP: Auto-assign (Enabled)
+
+- What this step means:
+Private subnets host backend workloads such as databases, app servers, EKS worker nodes, etc.
+No public IPs are assigned.
+They depend on NAT for outbound internet access.
+
+4.) Create an Internet Gateway (IGW)
+Console:
+VPC -> Internet Gateways -> Create
+
+Steps:
+Name: Prod-IGW
+Select IGW -> Attach to VPC -> choose Prod-VPC
+
+- What this step means:
+IGW enables:
+    Outbound -> Internet
+    Inbound -> only if your route table + security group allow it
+Public subnets use this IGW to reach the internet.
+
+5.) Create Public Route Table
+Console:
+VPC -> Route Tables -> Create Route Table
+
+Create the following:
+Name: Public-RT
+Select VPC: Prod-VPC
+Add Route:
+    Destination: 0.0.0.0/0
+    Target: Internet Gateway
+Associate Subnets to this route table:
+    Public-Subnet-A
+    Public-Subnet-B
+
+Purpose of the Default Route (0.0.0.0/0 -> IGW):
+- Any traffic that is not meant for internal VPC networks should go to the Internet via IGW.
+- Without this, Public subnets are not "public".
+
+6.) Create NAT Gateway
+Console:
+VPC -> NAT Gateways -> Create
+
+Configuration:
+Subnet: Public-Subnet-A
+Availability Mode: Regional
+Connectivity Type: Public
+
+Explanation:
+- A NAT Gateway allows private subnet resources to access:
+    OS updates
+    Package repositories
+    External APIs
+    But blocks inbound traffic from internet -> private subnets.
+
+7.) Create Private Route Table
+Console:
+VPC -> Route Tables -> Create
+
+Name: Private-RT
+VPC: Prod-VPC
+Add Route:
+    Destination: 0.0.0.0/0
+    Target: NAT Gateway
+Associate Subnets:
+    Private-Subnet-A
+    Private-Subnet-B
+
+Purpose of Default Route (0.0.0.0/0 -> NAT):
+- This enables outbound internet for:
+    Application servers
+    Lambda in private subnet
+    RDS requiring updates
+    EKS worker nodes
+- It ensures private subnets remain non-public, and only outbound traffic is allowed.

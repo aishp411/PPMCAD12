@@ -113,3 +113,5 @@ Amazon RDS provides different endpoints depending on the type of workload:
     High availability: failover happens gracefully
     Scaling: add more read replicas without changing application config
     Safer architecture: separates critical writes from heavy reads
+
+-----
