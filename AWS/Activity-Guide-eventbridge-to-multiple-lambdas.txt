@@ -1,0 +1,85 @@
+-------------------------------
+EventBridge -> Multiple Lambdas 
+-------------------------------
+
+## 1. Create or Identify EventBridge Bus
+-----------------------------------------
+
+1. Go to EventBridge.
+2. On the left menu -> "Event buses".
+3. Create a new bus:
+   - Name: 'orders-bus'
+   - Click "Create".
+
+---
+
+## 2. Create Target Lambda Functions
+-------------------------------------
+
+1. Open Lambda.
+2. Create three Lambda functions (develop code for these or use placeholder code with message saying fulfilling order and checking fraud):
+   - `create-fulfillment`
+   - `fraud-evaluator`
+3. Use any runtime.
+4. Deploy each function.
+
+---
+
+## 3. Create EventBridge Rules for Routing
+-------------------------------------------
+
+### Rule A: Paid Orders -> create-fulfillment Lambda
+1. Go to EventBridge -> Event buses -> choose `orders-bus`.
+2. Click Rules -> Create rule
+3. Name: `OrderPaidRule`.
+4. Rule type: "Rule with event pattern".
+5. Event pattern:
+   - Event source: "Other"
+   - Detail-type: `order.created`
+   - Add filter:
+     - detail.payment_status = `paid`
+6. Next -> Target:
+   - Select **Lambda**
+   - Choose `create-fulfillment`
+7. Create rule.
+
+### Rule B: High Value Orders -> fraud-evaluator Lambda
+1. Create new rule -> Name: `HighValueRule`.
+2. Event pattern:
+   - Detail-type: `order.created`
+   - Add filter:
+     - detail.amount > 1000 (use numeric greater-than UI)
+3. Target: Lambda -> `fraud-evaluator`
+4. Create rule.
+
+---
+
+## 4. Publish Test Events
+1. Go to EventBridge -> Event buses -> choose `orders-bus`.
+2. Click **"Send events"**.
+3. Sample event:
+   - Source: `my.orders.app`
+   - Detail-type: `order.created`
+   - Detail:
+     ```json
+     { "orderId": "1234", "amount": 1500, "payment_status": "paid" }
+     ```
+4. Click "Send".
+
+---
+
+## 5. Validate in CloudWatch Logs
+1. Go to CloudWatch -> Logs -> Log groups.
+2. Check:
+   - `/aws/lambda/create-fulfillment`
+   - `/aws/lambda/fraud-evaluator`
+3. Confirm each Lambda received the event based on matching rule.
+
+---
+
+## 6. Add DLQs & Retry Policies
+For each rule:
+1. Edit rule -> "Additional settings".
+2. Add Dead-letter queue (SQS).
+3. Configure retry attempts & event age.
+

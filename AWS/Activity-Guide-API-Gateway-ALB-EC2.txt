@@ -1,0 +1,234 @@
+-----------------------------------------------------
+API Gateway -> ALB -> Target Group -> 2 EC2 Instances
+-----------------------------------------------------
+
+This guide assumes you already completed: Activity-Guide-ALB-EC2.txt
+(where you created ALB -> Target Groups -> 2 Ubuntu EC2 servers running nginx on ports 8081 & 8082)
+
+Now we will place API Gateway in front of the ALB:
+--------------------------------------------------
+
+1. Why Add API Gateway on Top of ALB?
+-------------------------------------
+
+Benefit 1: Authentication (Cognito / OAuth2 / JWT)
+--------------------------------------------------
+
+API Gateway can authenticate API requests before they reach your ALB or EC2.
+
+Examples:
+Add login via Cognito User Pool
+Require JWT token for /app1 or /app2
+Custom auth using Lambda Authorizer
+
+Note: ALB cannot do API authentication.
+
+Benefit 2: Rate Limiting (Protect Your Backend)
+-----------------------------------------------
+
+API Gateway can throttle traffic so:
+    - No user can overload your ALB or EC2
+    - You set request-per-second limits
+    - You create usage plans for different customers
+
+Note: ALB has no per-client throttling or quota control.
+
+Other Benefits:
+---------------
+
+- Request/response transformations -> rewrite paths, change headers
+- Stage-based deployments -> /dev, /test, /prod
+- Central API front-door -> one endpoint for many services
+- Monitoring dashboards -> per-API latency, errors, throttles
+
+These capabilities make API Gateway ideal for public APIs, secure APIs, and multi-service backends.
+
+2. Architecture After Adding API Gateway
+-----------------------------------------
+
+Client
+  ↓
+API Gateway (HTTP or REST)
+  ↓
+ALB (Public or Private)
+  ↓
+Target Groups
+  ↓
+EC2-App-1 (nginx 8081)       EC2-App-2 (nginx 8082)
+
+4. Setup - HTTP API -> ALB
+---------------------------
+
+This is the simplest and cheapest option.
+
+Step 1.) Get Your ALB DNS
+
+Console -> EC2 -> Load Balancers -> API-ALB -> Copy DNS Name
+
+Example:
+
+http://prod-api-alb-123456.elb.amazonaws.com
+
+Step 2.) Create HTTP API
+
+Console -> API Gateway -> Create API -> HTTP API
+
+Name: HTTP-API-Front-ALB
+
+Click Next
+
+Step 3.) Add Integration
+
+Integration target: HTTP
+
+Endpoint URL:
+
+http://<ALB-DNS>
+
+IMPORTANT: Do NOT append /app1 or /app2 in the integration URL.
+
+Click Next.
+
+Step 4.) Configure Routes
+
+Add two routes:
+
+ANY /app1/{proxy+} -> Integration: ALB-DNS added above
+
+ANY /app2/{proxy+} -> Integration: ALB-DNS added above
+
+Why {proxy+}?
+It captures all subpaths under /app1/* and /app2/*.
+
+Step 5.) Create stages for deployment:
+Stage Name: dev
+Stage Name: prod
+
+Click Create
+
+Wait for API gateway to be created
+
+Step 6.) Fix Path Stripping
+
+By default, API Gateway does NOT forward the full path in some configurations.
+
+Go to:
+API Gateway -> Integrations -> Select the Route -> Manage Integrations
+Scroll down to "Parameter mapping"
+
+Click Create:
+
+Parameter to modify: path
+Modification type: Overwrite
+Value: $request.path	
+
+This ensures:
+Incoming request:
+/dev/app1/test123
+
+API Gateway forwards to ALB as:
+/app1/test123
+
+
+Step 7.) Enable Rate Limiting for /prod Stage
+
+Go to:
+API Gateway -> Your HTTP API -> Protect -> Throttling
+Select prod stage
+Under "Default route throttling" 
+Rate limit (RPS): 100
+Burst limit: 20
+
+Meaning:
+Max 100 requests per second
+Short bursts up to 20 are allowed
+API Gateway returns 429 Too Many Requests when exceeded
+
+Step 8.) Test Everything
+https://<api-id>.execute-api.<region>.amazonaws.com/dev/app1/
+https://<api-id>.execute-api.<region>.amazonaws.com/dev/app2/
+
+https://<api-id>.execute-api.<region>.amazonaws.com/prod/app1/
+https://<api-id>.execute-api.<region>.amazonaws.com/prod/app2/
+
+--------------------------------------------------------
+Additional Guide - Added for Testing with Route53 + ACM 
+--------------------------------------------------------
+
+To expose your API Gateway -> ALB -> EC2 stack under a clean production URL such as:
+
+https://api.example.com/app1/
+
+instead of:
+
+https://vgxz0bwo8a.execute-api.ap-southeast-1.amazonaws.com/prod/app1/
+
+
+follow these four steps:
+
+Step 1.) Request SSL Certificate (ACM)
+
+Go to AWS Certificate Manager (ACM)
+Region: same as API Gateway
+
+Click Request public certificate
+
+Add domain:
+
+api.example.com
+
+Choose DNS validation
+
+ACM will give CNAME records -> click Create records in Route 53
+
+Wait for "Issued" status.
+
+Step 2.) Create Custom Domain in API Gateway
+
+API Gateway -> Custom domain names -> Add Domain Name
+
+Domain name: api.example.com
+Routing mode: API Mappings only
+Endpoint type: Regional
+Certificate: select the ACM certificate you just validated
+
+Add Domain Name
+
+Step 3.) Create API Mapping (Removes /prod From URL)
+
+Inside API Gateway -> Custom domain -> api.example.com:
+
+Go to API Mappings -> Configure API mapping:
+
+API: Your HTTP API
+Stage: prod
+
+Path: (leave empty) <- this makes /prod disappear from the public URL
+
+Resulting structure:
+api.example.com/app1/*
+
+instead of:
+api.example.com/prod/app1/*
+
+Step 4.) Create Route 53 Alias Record
+
+Route 53 -> Hosted Zone -> example.com
+
+Create A Record
+Name: api
+Alias: Yes
+Alias target:
+API Gateway domain name (it appears in the dropdown)
+
+Save the record.
+
+Final Result
+Public client URL:
+https://api.example.com/app1/
+
+API Gateway forwards to ALB as:
+http://your-alb-dns/app1/
+
+ALB routes to target group -> EC2 nginx servers (8081/8082)
+------------------

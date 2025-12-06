@@ -1,0 +1,308 @@
+--------------------------------------------------------------
+Build an API-Style ALB -> Target Group -> 2 EC2 (nginx) Setup
+--------------------------------------------------------------
+
+### Objective
+
+Create a production-ready, API-style setup where an Application Load Balancer (ALB) routes path-based traffic:
+
+- 'http://<ALB>/app1/*' -> Server1 (EC2-App-1)
+- 'http://<ALB>/app2/*' -> Server2 (EC2-App-2)
+  
+  Components included: VPC, security groups, 2 EC2 instances running nginx (listening on different ports), 2 Target Groups, ALB with listener rules, health checks, testing & troubleshooting.
+
+---
+
+## Prerequisites
+
+- AWS Account with a user/role having: 'AmazonEC2FullAccess', 'ElasticLoadBalancingFullAccess', 'AmazonVPCFullAccess' (or equivalent).
+- An existing VPC with two public subnets in different AZs (if you don't have one, reuse the VPC from your previous "Create VPC" activity).
+  - For examples below Let us assume: 'Prod-VPC', 'Public-Subnet-A', 'Public-Subnet-B'.
+- Ability to SSH into EC2 from your IP.
+
+---
+
+# Overview
+
+1. Two EC2 instances (EC2-App-1 in Subnet-A, EC2-App-2 in Subnet-B).
+2. Each instance runs nginx:
+   - App-1 listens on port 8081 and serves '/' (will be mapped to '/app1' at ALB).
+   - App-2 listens on port 8082 and serves '/' (mapped to '/app2').
+3. Two target groups: 'TG-App1' (port 8081 -> EC2-App-1) and 'TG-App2' (port 8082 -> EC2-App-2).
+4. ALB (internet-facing) with listener on port 80 and path-based routing rules: '/app1/*' -> 'TG-App1', '/app2/*' -> 'TG-App2'.
+5. Security Groups to allow ALB -> EC2 traffic and client -> ALB traffic.
+6. Health checks to ensure only healthy backends receive traffic.
+
+---
+
+# Steps
+
+---
+
+## 1) Prepare / Confirm VPC & Subnets
+
+Console: VPC -> Your VPCs / Subnets
+
+- Confirm you have:
+
+  - VPC: 'Prod-VPC' (CIDR 10.0.0.0/16 or equivalent)
+  - Public Subnet A (e.g. '10.0.1.0/24') in AZ-a
+  - Public Subnet B (e.g. '10.0.2.0/24') in AZ-b
+- If not present, create them (refer to your VPC activity guide).
+- Make sure subnets have Auto-assign Public IPv4 enabled.
+
+---
+
+## 2) Create Security Groups
+
+### a) ALB Security Group (SG-ALB)
+
+Console: EC2 -> Security Groups -> Create
+
+- Name: 'SG-ALB'
+- VPC: 'Prod-VPC'
+- Inbound rules:
+
+  - 'HTTP (80)'  - Source: '0.0.0.0/0'
+- Outbound: Allow all (default)
+
+### b) EC2 App Security Group (SG-Apps)
+
+- Name: 'SG-Apps'
+- VPC: 'Prod-VPC'
+- Inbound rules:
+  - 'SSH (22)' - Source: YourPublicIP/32- (for SSH debugging; optional)
+  - 'Custom TCP 8081' - Source: 'SG-ALB' (so ALB can reach port 8081)
+  - 'Custom TCP 8082' - Source: 'SG-ALB' (so ALB can reach port 8082)
+- Outbound: Allow all
+
+Why: Use the ALB SG as source on instance ports so only the ALB can talk to your app ports (principle of least privilege).
+
+---
+
+## 3) Launch Two EC2 Instances for running nginx
+
+Console: EC2 -> Instances -> Launch instances
+
+Create two instances with similar configs:
+
+### Common Instance Settings
+
+- AMI: Ubuntu
+- Instance type: t3.micro / t2.micro
+- Network: 'Prod-VPC'
+- Subnet:
+  - EC2-App-1 -> 'Public-Subnet-A'
+  - EC2-App-2 -> 'Public-Subnet-B'
+- Auto-assign Public IP: Enabled
+- Security Group: 'SG-Apps'
+- Key pair: choose your SSH key
+
+### User data - EC2-App-1 (start nginx on port 8081)
+
+```bash
+#!/bin/bash
+apt update -y
+apt install -y nginx
+
+# Disable default nginx site
+rm -f /etc/nginx/sites-enabled/default
+
+# Create new nginx configuration for App1 on port 8081
+cat > /etc/nginx/sites-available/app1.conf <<'EOF'
+server {
+    listen 8081;
+    server_name _;
+
+    location / {
+        return 200 "<html><body><h1>Hello from EC2-App-1</h1><p>Served on port 8081 (Ubuntu)</p></body></html>";
+    }
+
+    location /health {
+        return 200 "OK";
+    }
+}
+EOF
+
+ln -s /etc/nginx/sites-available/app1.conf /etc/nginx/sites-enabled/app1.conf
+
+# Restart nginx
+systemctl restart nginx
+systemctl enable nginx
+```
+
+### User data - EC2-App-2 (start nginx on port 8082)
+
+```bash
+#!/bin/bash
+apt update -y
+apt install -y nginx
+
+# Disable default nginx site
+rm -f /etc/nginx/sites-enabled/default
+
+# Create nginx config for App2 on port 8082
+cat > /etc/nginx/sites-available/app2 <<'EOF'
+server {
+    listen 8082;
+    server_name _;
+
+    location / {
+        return 200 "<html><body><h1>Hello from EC2-App-2</h1><p>Served on port 8082 (Ubuntu)</p></body></html>";
+    }
+
+    location /health {
+        return 200 "OK";
+    }
+}
+EOF
+
+ln -s /etc/nginx/sites-available/app2 /etc/nginx/sites-enabled/app2
+
+# Restart nginx
+systemctl restart nginx
+systemctl enable nginx
+```
+
+- Launch both instances.
+
+---
+
+## 4) Create Target Groups
+
+Console: EC2 -> Target Groups -> Create target group
+
+### TG for App1
+
+- Name: 'TG-App1'
+- Target type: Instance
+- Protocol: HTTP
+- Port: 8081
+- VPC: 'Prod-VPC'
+- Health checks:
+
+  - Protocol: HTTP
+  - Path: '/health'
+  - Healthy threshold: 2, Unhealthy: 2
+- Register targets:
+
+  - Add 'EC2-App-1' (instance) and set port 8081
+
+Create.
+
+### TG for App2
+
+- Name: 'TG-App2'
+- Target type: Instance
+- Protocol: HTTP
+- Port: 8082
+- VPC: 'Prod-VPC'
+- Health checks: Path '/health'
+- Register targets:
+
+  - Add 'EC2-App-2' (instance), port 8082
+
+Create.
+
+Question: Why instance target type and fixed port?
+- We want ALB path-based routing to forward to a particular instance + port (server-specific). 
+- Using instance + port mapping is simplest and standard.
+- In production you would typically use multiple targets per TG (ASG, ECS tasks), but this shows path-routing clearly.
+
+---
+
+## 5) Create the Application Load Balancer (ALB)
+
+Console: EC2 -> Load Balancers -> Create Load Balancer -> Application Load Balancer
+
+### ALB Basic Settings
+
+- Name: 'Prod-API-ALB'
+- Scheme: internet-facing
+- IP address type: ipv4
+- Listeners: 'HTTP 80'
+
+### Availability Zones & Subnets
+
+- Select at least 'Public-Subnet-A' and 'Public-Subnet-B' (ALB should be in public subnets)
+
+### Security Group
+
+- Choose 'SG-ALB' (created earlier)
+
+### Configure Routing (initial)
+
+- For default target group, pick any (we will add rules next). You can choose 'TG-App1' as default or create a simple default 404. Use 'TG-App1' temporarily.
+
+Create the ALB.
+
+---
+
+## 6) Configure Listener Rules (Path-based routing)
+
+Console: EC2 -> Load Balancers -> Select 'Prod-API-ALB' -> Listeners -> View/Edit rules for port 80
+
+Edit the rules to:
+
+1. Rule 1: If Path is '/app1*' -> Forward to 'TG-App1'
+2. Rule 2: If Path is '/app2*' -> Forward to 'TG-App2'
+3. Default action: Return fixed response - 404 or forward to a landing TG. (Optional but recommended)
+
+Example rule tree:
+
+- If path is '/app1/*' -> forward 'TG-App1'
+- Else if path is '/app2/*' -> forward 'TG-App2'
+- Else -> Return fixed response '404' (or forward to a maintenance page)
+
+Important: Use wildcard style '/app1*' or '/app1/*' depending on console; ensure both '/app1' and '/app1/anything' match.
+
+---
+
+## 7) Adjust Target Group Health Checks & Verify Health
+
+- Console: EC2 -> Target Groups -> Select 'TG-App1' / 'TG-App2' -> Targets
+- Wait until each target shows as healthy.
+
+  - Health checks will call 'http://<instance-ip>:8081/health' and ':8082/health'.
+- If unhealthy: verify nginx is running and firewall/security group allows traffic from ALB.
+
+---
+
+## 8) Test the Setup
+
+- Get ALB DNS: EC2 -> Load Balancers -> select 'Prod-API-ALB' -> copy DNS name.
+
+Open in browser:
+
+- 'http://<ALB-DNS>/app1/' -> should respond: Hello from EC2-App-1
+- 'http://<ALB-DNS>/app2/' -> should respond: Hello from EC2-App-2
+- 'http://<ALB-DNS>/' -> should show 404 (or default landing) depending on your rule
+
+You can also test with 'curl':
+
+'''bash
+curl -i http://<ALB-DNS>/app1/
+curl -i http://<ALB-DNS>/app2/
+'''
+
+---
+
+# Traffic Flow Explanation
+
+- Client -> Internet -> ALB (port 80, SG-ALB) -> Listener Rule matches /app1 -> Forward to TG-App1 -> ALB connects to EC2-App-1:8081 (SG-Apps permits SG-ALB) -> EC2 serves response -> ALB returns to client
+- ALB terminates client connection and opens new connection to backend on configured port.
+- Health checks keep only healthy instances receiving traffic.
+- Using different target groups (and backend ports) allows ALB to route different API paths to different servers.
+
+---
+
+# Production Considerations / Enhancements
+
+- HTTPS / TLS termination: Create an HTTPS listener (443), attach ACM certificate, redirect 80 -> 443. Terminate TLS at ALB for centralized cert management.
+- Autoscaling & Redundancy: Replace single instance targets with Auto Scaling Groups (ASG) per service for resilience.
+- Multiple targets per TG: For TG-App1/TG-App2 you can register multiple instances (or multiple ports on the same instance) for scale.
+- Service discovery: Move services to ECS/EKS for containerized scaling and dynamic port mapping.
+- WAF & Rate limiting: Add AWS WAF in front of ALB to protect APIs.
+- Logging & Monitoring: Enable ALB access logs to S3 and CloudWatch metrics/alarms.
+- Sticky sessions: If required, enable target group stickiness (not recommended for REST APIs).
+---

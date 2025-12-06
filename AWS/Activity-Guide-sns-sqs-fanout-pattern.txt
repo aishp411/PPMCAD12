@@ -1,0 +1,75 @@
+-------------------------------------------
+SNS -> Multiple SQS Queues -> Lambda/Workers
+-------------------------------------------
+
+## 1. Create SNS Topic
+1. Goto SNS.
+2. Click Topics -> Create topic
+3. Type: Standard.
+4. Name: `order-events`.
+5. Create topic.
+
+---
+
+## 2. Create SQS Queues (One per consumer)
+1. Goto SQS.
+2. Create queue:
+   - Name: `billing-queue`
+   - Type: Standard
+3. Create queue:
+   - Name: `shipping-queue`
+4. Create queue:
+   - Name: `analytics-queue`
+
+---
+
+## 3. Subscribe SQS Queues to SNS Topic
+For each queue:
+
+1. Open SNS -> Topics -> select `order-events`.
+2. Click Subscriptions -> Create subscription**.
+3. Protocol: SQS
+4. Endpoint: choose the SQS queue ARN
+   - billing-queue
+   - shipping-queue
+   - analytics-queue
+5. Click Create subscription.
+6. SNS automatically updates SQS access policy (verify inside queue -> Permissions tab).
+
+---
+
+## 4. Create Lambda Functions
+If using Lambda to process queues:
+
+1. Open Lambda.
+2. Create: (develop code for these or use placeholder code with message saying billing processor, shipping processor and analytics processor):
+   - `billing-processor`
+   - `shipping-processor`
+   - `analytics-processor`
+3. Deploy code.
+
+---
+
+## 5. Add SQS Triggers to Each Lambda
+For each queue:
+
+1. Open Lambda -> choose function.
+2. Click Add trigger.
+3. Select SQS.
+4. Choose queue (example: `billing-queue`).
+5. Configure:
+   - Batch size defaults (usually 1–10)
+6. Save.
+
+Repeat for:
+- shipping-queue -> shipping-processor
+- analytics-queue -> analytics-processor
+
+---
+
+## 6. Publish Test Message to SNS
+1. Go to SNS -> Topics -> `order-events`.
+2. Click **"Publish message"**.
+3. Message body:
+   ```json
+   { "orderId": "1234", "amount": 250 }

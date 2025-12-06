@@ -1,0 +1,165 @@
+-------------------------------------------------
+# Scenario based AWS Architecture Decision Guide
+-------------------------------------------------
+
+## 1. Serverless vs Compute-Based Architecture
+----------------------------------------------
+
+### Use Serverless (Lambda + API Gateway) when:
+
+Traffic Patterns:
+- Unpredictable/variable traffic (spiky workloads)
+- Low to medium traffic volume
+- Infrequent requests (API called few times per hour)
+
+Workload Characteristics:
+- Request completion in <15 minutes
+- Stateless operations
+- Event-driven workflows
+- Quick bursts of activity
+
+Specific Use Cases:
+- REST APIs with variable load
+- Webhooks and event processors
+- Scheduled jobs (cron-like tasks)
+- Image/file processing on upload
+- Chatbot backends
+
+### Use Compute-Based (EC2/ECS/EKS + ALB) when:
+
+Traffic Patterns:
+- Consistent, predictable high traffic
+- Sustained load (always busy)
+- High throughput requirements (>1000 req/sec sustained)
+
+Workload Characteristics:
+- Long-running processes (>15 min)
+- Stateful applications (sessions, in-memory cache)
+- Persistent connections
+- Sub-10ms latency requirements
+- Heavy CPU/GPU workloads
+
+Specific Use Cases:
+- Microservices architecture (most common)
+- Monolithic applications
+- Real-time video/audio processing
+- Machine learning model serving (sustained)
+- Database servers
+- Game servers
+
+---
+
+### Hybrid Approach
+
+Use both together:
+- Lambda: API Gateway, event processing, lightweight tasks
+- Compute: Heavy processing, databases, stateful services
+
+---
+
+## 2. EventBridge vs SNS vs SQS
+--------------------------------
+
+### Use EventBridge
+
+When you need:
+- Complex event routing (pattern matching, content filtering)
+- Multiple AWS services as targets
+- Scheduled events (cron jobs)
+
+Patterns:
+```
+Event Source -> EventBridge -> 
+  -> Lambda (if order.status = "paid")
+  -> Step Functions (if order.total > 1000)
+  -> SQS (if order.country = "US")
+```
+
+Key Feature: Smart routing based on event content
+
+---
+
+### Use SNS (Simple Notification Service)
+
+When you need:
+- Fan-out (1 message -> many subscribers)
+- Push notifications (mobile, email, SMS)
+- Simple pub/sub messaging
+- Low latency delivery
+- HTTP/HTTPS endpoints as subscribers
+
+Patterns:
+```
+Publisher -> SNS Topic -> 
+  -> Email
+  -> SMS
+  -> Lambda
+  -> SQS (fan-out pattern)
+  -> HTTP endpoint
+```
+
+Key Feature: Fast broadcast, no message persistence (fire and forget)
+
+---
+
+### Use SQS (Simple Queue Service)
+
+When you need:
+- Decoupling producers and consumers
+- Message persistence and retry
+- Guaranteed message delivery
+- Order preservation (FIFO queues)
+- Dead letter queue for failed messages
+
+Patterns:
+```
+Producer -> SQS Queue -> Consumer (Lambda/EC2/ECS/EKS)
+                    | (if fails)
+                    ->  Dead Letter Queue
+```
+
+Key Feature: Reliable message storage, pull-based consumption
+
+---
+
+### Combined Patterns
+
+1.) SNS + SQS (Fan-out):
+```
+Producer -> SNS -> 
+  -> SQS Queue 1 -> Service A
+  -> SQS Queue 2 -> Service B
+  -> SQS Queue 3 -> Service C
+```
+Why: Broadcast to multiple services with guaranteed delivery and independent consumption
+
+2.) EventBridge + SQS:
+```
+Event Source -> EventBridge (routing) -> SQS (buffering) -> Lambda
+```
+Note: Buffering is Temporarily storing messages in a queue to handle them at a controlled rate.
+Why: Complex routing with reliable processing
+
+---
+
+## 3. Reverse Proxy vs ALB vs API Gateway
+-----------------------------------------
+
+Key Points:
+1. ALB is the foundation in AWS
+- Almost always required for EC2/ECS/EKS workloads
+- Does Layer 7 routing (path, header, host-based) - much of what Nginx does
+- Only replace with NLB for ultra-high performance needs (millions req/sec)
+
+2. Nginx sits BEHIND ALB
+ALB (Load Balancing) -> Nginx (Web Server) -> Application
+
+- Serves static files (images, CSS, JS)
+- Proxies dynamic requests to backend (Java/Python/NodeJS)
+- Adds Basic Auth, advanced rate limiting, caching
+- Only needed when ALB features aren't enough
+
+3. API Gateway is an ALTERNATIVE to ALB or ADDITIONAL FEATURE on ALB
+- Use for serverless (Lambda)
+- Use when you need API management, per-client throttling, custom auth
+- Can also layer on top: API Gateway -> ALB (for both features)

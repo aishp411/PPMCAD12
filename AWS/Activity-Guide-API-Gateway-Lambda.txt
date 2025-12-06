@@ -1,0 +1,183 @@
+---------------------
+API Gateway -> Lambda
+---------------------
+
+
+### Objective
+Exposing a Lambda function through API Gateway using an HTTP API.
+
+This is the simplest and most common serverless API setup.
+
+1. Why Use API Gateway in Front of Lambda?
+------------------------------------------
+
+Benefit 1: Turn Lambda Into a Public or Private API
+----------------------------------------------------
+API Gateway allows your Lambda to be invoked via HTTPS without exposing any AWS internals.
+
+Examples:
+/login -> Auth Lambda
+/orders -> Order Lambda
+/health -> Health-check Lambda
+
+Benefit 2: Authentication / Authorization
+-----------------------------------------
+
+API Gateway adds:
+Cognito authentication
+OAuth2 / JWT validation
+Lambda authorizers
+IAM auth (SigV4)
+Lambda alone cannot perform secure API-level auth.
+
+Benefit 3: Rate Limiting & Usage Plans
+----------------------------------------
+
+API Gateway protects Lambda from excessive calls.
+RPS limits
+Burst throttling
+API keys & quotas
+
+
+2. Architecture Overview
+------------------------
+
+Client
+  ↓
+API Gateway (HTTP API or REST API)
+  ↓
+Lambda Function
+
+3. Setup: API Gateway -> Lambda (HTTP API)
+
+This is the modern and cheapest approach.
+
+Step 1: Create a Lambda Function
+
+Go to: Lambda -> Create Function
+
+Choose:
+
+Author from scratch
+
+Name: my-api-lambda
+
+Runtime: Python 3.x or Node.js 24.x
+
+Create a file named index.mjs in your Lambda function and paste the following code:
+
+export const handler = async (event = {}) => {
+  console.log("Received event:", JSON.stringify(event));
+
+  // Support multiple event shapes:
+  // 1) HTTP API (v2) -> event.requestContext.http.method, event.rawPath
+  // 2) REST API (v1) -> event.httpMethod, event.path
+  // 3) Direct invoke / test -> undefined fields (we'll fallback)
+  const method =
+    event.requestContext?.http?.method ?? // HTTP API v2
+    event.httpMethod ??                    // REST API v1
+    event.requestContext?.httpMethod ??    // sometimes present differently
+    "UNKNOWN";
+
+  const rawPath =
+    event.rawPath ??     // HTTP API v2
+    event.path ??        // REST API v1
+    (event.requestContext?.http?.path) ?? // fallback
+    "/";
+
+  const query = event.rawQueryString ?? JSON.stringify(event.queryStringParameters ?? {});
+  const body = event.body ?? null;
+
+  const responseBody = {
+    message: "Hello from HTTP Lambda (robust handler)",
+    method,
+    path: rawPath,
+    query,
+    hasBody: body !== null
+  };
+
+  return {
+    statusCode: 200,
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(responseBody)
+  };
+};
+
+Deploy the Lambda.
+
+Step 2: Create HTTP API
+
+Navigate: API Gateway -> Create API -> HTTP API -> Build
+
+Name:
+
+HTTP-API-Lambda
+
+Create with default setting without adding integration, routes here and keep the stage as $default
+
+Step 3: Create Routes
+
+Go to Routes -> Create
+
+Create route:
+
+ANY /myfunction
+
+You can add more routes as needed:
+
+GET /orders
+POST /orders
+ANY /{proxy+}
+
+Step 4: Add Integration (Lambda)
+
+Go to:
+API Gateway -> HTTP-API-Lambda -> Integrations -> Add Integration
+
+Select the route
+
+Click on "create and attach an integration"
+
+Integration target: Lambda function
+
+Select your function: my-api-lambda
+
+Make sure that "Grant API Gateway permission to invoke your Lambda function" is checked
+
+Create.
+
+
+Step 5: Deployment Stage
+
+Go to Deploy -> Stages
+
+Select the default stages
+
+Copy the Invoke URL:
+
+e.g.:
+https://abcd1234.execute-api.ap-southeast-1.amazonaws.com/myfunction
+
+Step 6: Test
+
+Expected output:
+
+{
+  "message": "Hello from HTTP Lambda (robust handler)",
+  "path": "/myfunction",
+  "method": "GET"
+}
+
+Step 7: Enable Rate Limiting for /prod Stage
+
+Go to:
+API Gateway -> Your HTTP API -> Protect -> Throttling
+Select default stage
+Under "Default route throttling" 
+Rate limit (RPS): 100
+Burst limit: 20
+
+Meaning:
+Max 100 requests per second
+Short bursts up to 20 are allowed
+API Gateway returns 429 Too Many Requests when exceeded
