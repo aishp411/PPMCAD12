@@ -114,6 +114,8 @@ server {
     listen 8081;
     server_name _;
 
+    default_type text/html;
+
     location / {
         return 200 "<html><body><h1>Hello from EC2-App-1</h1><p>Served on port 8081 (Ubuntu)</p></body></html>";
     }
@@ -142,11 +144,12 @@ apt install -y nginx
 rm -f /etc/nginx/sites-enabled/default
 
 # Create nginx config for App2 on port 8082
-cat > /etc/nginx/sites-available/app2 <<'EOF'
+cat > /etc/nginx/sites-available/app2.conf <<'EOF'
 server {
     listen 8082;
     server_name _;
 
+    default_type text/html;
     location / {
         return 200 "<html><body><h1>Hello from EC2-App-2</h1><p>Served on port 8082 (Ubuntu)</p></body></html>";
     }
@@ -157,7 +160,7 @@ server {
 }
 EOF
 
-ln -s /etc/nginx/sites-available/app2 /etc/nginx/sites-enabled/app2
+ln -s /etc/nginx/sites-available/app2.conf /etc/nginx/sites-enabled/app2.conf
 
 # Restart nginx
 systemctl restart nginx
