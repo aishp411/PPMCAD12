@@ -235,7 +235,7 @@ Console: EC2 -> Load Balancers -> Create Load Balancer -> Application Load Balan
 
 ### Configure Routing (initial)
 
-- For default target group, pick any (we will add rules next). You can choose 'TG-App1' as default or create a simple default 404. Use 'TG-App1' temporarily.
+- For default target group, pick any (we will add rules next). You can choose 'TG-App1' as default or create a simple default 404 and mention in the response body that "route to /app1/ and /app2/ for app specific page"
 
 Create the ALB.
 
@@ -247,8 +247,8 @@ Console: EC2 -> Load Balancers -> Select 'Prod-API-ALB' -> Listeners -> View/Edi
 
 Edit the rules to:
 
-1. Rule 1: If Path is '/app1*' -> Forward to 'TG-App1'
-2. Rule 2: If Path is '/app2*' -> Forward to 'TG-App2'
+1. Rule 1: If Path is '/app1/*' -> Forward to 'TG-App1'
+2. Rule 2: If Path is '/app2/*' -> Forward to 'TG-App2'
 3. Default action: Return fixed response - 404 or forward to a landing TG. (Optional but recommended)
 
 Example rule tree:

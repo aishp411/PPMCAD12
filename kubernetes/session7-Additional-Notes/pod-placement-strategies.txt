@@ -1,0 +1,171 @@
+Pod Placement Strategies:
+--------------------------
+
+Default Behavior / algorithm:
+- Scheduler looks at available nodes
+- Considers only resource requirements
+- Uses "least requested" algorithm by default
+- Tries to spread pods across nodes
+
+What if we want to provision our pods to specific nodes.
+
+e.g.:
+
+Scenario 1 - Mixed Node Types:
+    Have:
+    - Some nodes with GPUs
+    - Some with average CPU/memory
+
+    Need:
+    - Match pods to right hardware
+    i.e.,
+    ML workloads -> GPU nodes
+    common workloads -> other nodes
+
+Scenario 2 - Critical Applications:
+    Have:
+    - Multiple replicas of same service
+    - Multiple availability zones
+
+    Need: 
+    - Spread pods across zones & nodes for High availability
+    i.e.,
+    3 replicas of web service & each in different AZ
+
+
+How to achieve:
+
+Node Assignment Methods:
+
+a.) NodeSelector:
+- Simplest form of node selection
+- Uses node labels for matching
+- Hard requirement - pods will not schedule if no match
+
+handson:
+- check the exisiting labels in the nodes:
+    - kubectl get nodes --show-labels
+- Add labels to nodes
+    - kubectl label nodes <node-name> processor=gpu
+- Apply the pod manifest with node selector:
+    - kubectl apply -f manifests\pod-with-node-selector.yaml
+- Verify that the pod got scheduled on the same node with label // kubectl get pods -o wide
+
+
+b.) Node Affinity:
+- More expressive than nodeSelector
+- Supports complex matching rules
+- Two types:
+    requiredDuringSchedulingIgnoredDuringExecution - Hard requirement (must match)
+    preferredDuringSchedulingIgnoredDuringExecution - Soft requirement (try to match)
+-  IgnoredDuringExecution in the above types ensure that the running pods don't evict or gets deleted if labels change after execution.
+
+handson:
+- Check node labels to help us define affinity with the help of existing labels
+    - kubectl get nodes --show-labels
+- You can apply custom labels like "disk-type" as well for any specific use case using command:
+    - kubectl label nodes <node-name> disk-type=ssd
+- deploy the application with required node affinity defined:
+    - kubectl apply -f manifests\required-node-affinity-demo.yaml
+    - explaination:
+        - Hard requirement: Pod MUST be scheduled to nodes in these zones
+        - Will only schedule on nodes labeled with:
+            zone=ap-southeast-1a OR zone=ap-southeast-1b
+        - Pod remains Pending if no matching nodes found
+        - 'IgnoredDuringExecution': If node labels change later, running pod stays
+- deploy the application with preferred node affinity defined:
+    - kubectl apply -f manifests\preferred-node-affinity-demo.yaml
+    - explaination:
+        - Soft requirement: Scheduler tries best effort
+        - Weights:
+            - high-memory preference: 80 points
+            - ssd preference: 20 points
+        - Pod will schedule even if no matches found
+
+
+c.) Pod Affinity/Anti-affinity:
+- Affinity - Run my pods NEAR the other pods, which is co-locate related pods
+- Anti-Affinity - Run my pods AWAY from the other pods, which is spread pods for high availability
+- Supports complex matching rules
+- Two types:
+    requiredDuringSchedulingIgnoredDuringExecution - Hard requirement (must match)
+    preferredDuringSchedulingIgnoredDuringExecution - Soft requirement (try to match)
+-  IgnoredDuringExecution in the above types ensure that the running pods don't evict or deleted if labels change after execution.
+- The placement depends on topologyKey's Significance, in which most common are:
+    - kubernetes.io/hostname - node level
+    - topology.kubernetes.io/zone - Availability zone level
+    - topology.kubernetes.io/region - Geographic region level
+
+
+handson:
+- Check node labels to help us define affinity with the help of existing labels
+    - kubectl get nodes --show-labels
+- You can apply custom labels like "disk-type" as well for any specific use case using command:
+    - kubectl label nodes <node-name> disk-type=ssd
+- deploy the application with required pod affinity defined:
+    - kubectl apply -f manifests\required-pod-affinity-demo.yaml
+    - explaination:
+        - Pod MUST run on same node as pods labeled app=web
+        - topologyKey: kubernetes.io/hostname: Same node requirement
+- deploy the application with preferred pod affinity defined:
+    - kubectl apply -f manifests\preferred-pod-affinity-demo.yaml
+    - explaination:
+        - Tries to schedule in same zone as cache pods
+        - Not mandatory - will schedule anyway if not possible
+        - topologyKey: topology.kubernetes.io/zone: Zone-level affinity
+- deploy the application with required pod anti-affinity defined:
+    - kubectl apply -f manifests\required-deploy-anti-affinity-demo.yaml
+    - explaination:
+        - Pods MUST NOT run on same node as other webapp pods
+        - Forces spread across nodes
+        - Used in Deployments with multiple replicas
+- deploy the application with preferred pod anti-affinity defined:
+    - kubectl apply -f manifests\preferred-pod-anti-affinity-demo.yaml
+    - explaination:
+        - Tries to schedule in different zones than web pods
+        - Soft requirement - will schedule anyway if needed
+        - Weight 100: Strong preference
+
+Good to read: Check, what does EKS best practice guide suggest for running workloads in different availability zones: https://aws.github.io/aws-eks-best-practices/
+
+
+d.) Taints and Tolerations
+
+Taint = "Keep pods away from node" (Node property)
+Toleration = "Can tolerate a taint" (Pod property)
+
+Taint Effects:
+- NoSchedule: Pod won't be scheduled (hard rule)
+- PreferNoSchedule: Try to avoid scheduling pod (soft rule)
+- NoExecute: Pod will be evicted if running and won't be scheduled
+
+Tolerations parameters:
+- key: "key-name"       # What taint to match
+- operator: "Equal"     # How to match (Equal or Exists)
+- value: "value-name"   # What value to match
+- effect: "NoSchedule"  # What effect to tolerate as per the taint
+- tolerationSeconds: 3600  # Optional, but important for NoExecute case
+
+handson:
+- Taint node for dedicated use
+    - kubectl taint nodes <node-name-1> dedicated=special-user:NoSchedule
+- Taint node for maintenance
+    - kubectl taint nodes <node-name-2> maintenance=planned:NoExecute
+- Apply Toleration for using dedicated node:
+    - kubectl apply -f manifests\pod-with-noschedule-toleration.yaml
+- Apply Toleration for evicting the pods from the nodes for maintainance
+    - kubectl apply -f manifests\pod-with-noexecute-toleration.yaml
+- Remove taint from the nodes:
+    - kubectl taint nodes <node-name-1> node1 dedicated:NoSchedule-
+    - kubectl taint nodes <node-name-1> node1 maintenance:NoExecute-
+
+Important Notes:
+
+Taints:
+- are "No Entry" signs on nodes
+- If there's no "No Entry" sign, anyone can not enter
+
+Tolerations:
+- are "I have permission to enter despite the sign"
+- DON'T force pods to run only on tainted nodes
+- Without taints, pods schedule normally based on other factors

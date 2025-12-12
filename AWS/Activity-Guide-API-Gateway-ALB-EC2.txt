@@ -75,8 +75,6 @@ Console -> API Gateway -> Create API -> HTTP API
 
 Name: HTTP-API-Front-ALB
 
-Click Next
-
 Step 3.) Add Integration
 
 Integration target: HTTP
@@ -145,6 +143,12 @@ Short bursts up to 20 are allowed
 API Gateway returns 429 Too Many Requests when exceeded
 
 Step 8.) Test Everything
+
+Go to:
+API Gateway -> Your HTTP API -> Deploy -> select the stage e.g.: dev / prod
+Copy the url from there
+
+
 https://<api-id>.execute-api.<region>.amazonaws.com/dev/app1/
 https://<api-id>.execute-api.<region>.amazonaws.com/dev/app2/
 

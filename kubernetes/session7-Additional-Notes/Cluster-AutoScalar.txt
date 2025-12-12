@@ -1,0 +1,47 @@
+Node auto-scaling in EKS using Kubernetes Cluster Autoscaler:
+-------------------------------------------------------------
+
+
+The Cluster Autoscaler (CA) is a component that automatically adjusts the size of your Kubernetes cluster especially the worker nodes when:
+
+- There are pods that fail to run due to insufficient resources
+- There are nodes in the cluster that have been underutilized for an extended period
+
+How Cluster Autoscaler Works:
+
+Scaling Up:
+    - Pods enter "Pending" state due to insufficient resources
+    - CA continuously monitors for unschedulable pods
+    - CA identifies pods that can't be scheduled
+    - CA Checks if Pod is Actually Unschedulable
+        - Verifies pod hasn't failed for other reasons
+        - Confirms pod resource requests are valid
+        - Checks if pod respects scheduling constraints
+    - CA simulates pod scheduling
+        - CA performs a "what-if" analysis by
+            - Creating a virtual node with the properties of a new node from the auto-scaling group
+            - Running the Kubernetes scheduler's logic against this virtual node
+            - Verifying if the pending pods would successfully schedule
+    - If simulation succeeds, new nodes are added by
+        - Verifying cloud provider quotas meaning verifying EKS managed node group quota
+        - Check max node limits
+        - Increase the aws autoscaling group desired capacity
+        - Wait for node to join cluster
+        - New worker node is added to the cluster
+
+Scaling Down:
+    - CA regularly checks for underutilized nodes
+    - Identifies pods that can be moved to other nodes
+    - Evicts pods safely
+    - Removes the empty node
+
+Installation Steps:
+Detailed installation guide is available at: Cluster-AutoScalar\Installation-Guide.txt
+
+handson:
+- Test the Node Autoscaling scenario:
+    - Deploy the manifest file: kubectl apply -f manifests\test-ca.yaml
+
+Note:
+- By default, cluster autoscaler will not terminate nodes running pods in the kube-system namespace. You can override this default behaviour by passing in the --skip-nodes-with-system-pods=false flag.
+- By default, cluster autoscaler will wait 10 minutes between scale down operations, you can adjust this using the --scale-down-delay-after-add, --scale-down-delay-after-delete, and --scale-down-delay-after-failure flag. E.g. --scale-down-delay-after-add=5m to decrease the scale down delay to 5 minutes after a node has been added.

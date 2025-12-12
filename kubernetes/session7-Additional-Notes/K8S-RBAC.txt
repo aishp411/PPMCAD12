@@ -1,0 +1,72 @@
+RBAC (Role-Based Access Control):
+---------------------------------
+
+RBAC regulates access to workload and resources running inside Kubernetes based on permissions assigned to users and service accounts.
+
+Key Components:
+- Users: 
+    - Managed outside of Kubernetes (client certificate, AWS IAM users)
+- ServiceAccount: 
+    - Managed inside Kubernetes
+    - it acts as an identity for pods or applications
+    - can be linked to AWS IAM roles / Users in EKS
+- Role:
+    - Permissions within a namespace
+    - Specific kubernetes resources and actions can defined along with fine grained control
+- ClusterRole:
+    - Cluster-wide permissions
+    - Specific kubernetes resources and actions can defined along with fine grained control
+- RoleBinding: 
+    - Namespace-specific
+    - Links Role to users/ServiceAccounts
+- ClusterRoleBinding: 
+    - Used for cluster-level access
+    - Links ClusterRole to users/ServiceAccounts
+
+handson:
+
+Let's Implement Fine-Grained Access Control in Kubernetes
+
+Use Case: 
+
+Create a new user account for a junior developer. 
+
+This developer should be able to:
+    View existing pods
+    Create new pods
+    Update pod configurations
+But should NOT be able to:
+    Delete pods
+    Access other resources (services, deployments, etc.)
+
+Steps:
+a.) Create a Service Account
+    - kubectl create serviceaccount junior-dev
+    # Above command creates a Kubernetes service account which will represent the required user.
+
+b.) Define RBAC Policies
+    - View and apply the file management-rbac.yaml:
+        - kubectl apply -f manifests\management-rbac.yaml
+
+c.) Generate Authentication Token
+    - kubectl create token junior-dev
+    # Above command creates service account token which can be used for authentication when making requests to the Kubernetes API
+
+d.) Configure kubectl Context
+    - Configure credentials
+        - kubectl config set-credentials junior-dev --token=<Token-fron-above-command>
+    - Create a new context
+        - kubectl config set-context junior-dev-context --cluster=<EKS-cluster-arn> --user=junior-dev
+    # Above commands set up the credentials and context for our new service account based user
+
+e.) Testing the Configuration
+    - Switch to the new context
+        - kubectl config use-context junior-dev-context
+    - Should work: Listing pods
+        - kubectl get pods
+    - Should work: Creating a pod
+        - kubectl run test-nginx --image=nginx:latest
+    - Should work: Getting pod details
+        - kubectl get pod test-nginx -o yaml
+    - Should fail: Trying to delete a pod
+        - kubectl delete pod test-nginx

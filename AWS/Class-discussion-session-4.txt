@@ -1,0 +1,170 @@
+---------------------------
+AWS Training Program
+---------------------------
+
+-----------
+Session 4:
+-----------
+
+------------------------------------------------------
+CI/CD Deployment Strategies for EC2-based Applications
+------------------------------------------------------
+
+Let us cover different deployment approaches for applications running on EC2 instances, with a focus on minimizing downtime and managing updates effectively.
+
+Infrastructure Setup:
+- Application Load Balancer (ALB)
+- Target Group
+- Auto Scaling Group (min: 3, max: 10 EC2 instances)
+- Java application running on EC2 instances
+
+Deployment Approaches
+1.) Mutable Deployment (In-Place Updates)
+
+When to use:
+- Fixed number of EC2 instances without auto-scaling
+Example: 3 EC2 instances of type t4.8xlarge
+
+Process:
+- SSH into each EC2 server
+- Download the new application version (e.g., jar v1.11) from artifact repository
+- Place it in the application directory (e.g., /opt/app)
+- Restart the application (systemctl restart app)
+
+2.) Immutable Deployment
+
+When to use:
+- EC2 instances managed by Auto Scaling Groups
+- Create new instances with updated application version
+- Replace old instances with new ones
+
+------------------------------------
+Zero-Downtime Deployment Strategies
+------------------------------------
+
+Scenario: Music Streaming App
+- 12 EC2 instances running Java app v1.1
+- Need to deploy v1.2 with zero downtime
+
+1.) Mutable Approach with Rolling Updates
+
+Approach 1:
+- Remove one server from the target group first
+- Perform updates and validate
+- If successful, update in batches of 3-4 servers
+
+Approach 2 (prefered): Server Grouping
+- Divide servers into groups (e.g., 4 groups of 3 servers each)
+- Update one group at a time
+- Validate before moving to the next group
+
+Kubernetes Comparison:
+Kubernetes uses similar strategies with maxSurge and maxUnavailable parameters:
+- maxSurge: Maximum pods created above desired replicas
+- maxUnavailable: Maximum pods that can be unavailable during updates
+
+----------------------
+Blue/Green Deployment
+----------------------
+
+Process:
+- Blue Environment: Existing target group with 12 EC2 instances (v1.1)
+- Green Environment: New target group with 12 EC2 instances (v1.2)
+- Test and validate the green environment
+- Switch ALB to point to green target group
+- Keep blue environment as backup
+
+Another Option:
+- Use separate ALBs for blue and green environments
+- Update DNS (Route53) to point to green environment ALB
+
+Database Considerations:
+Option 1: Separate Databases
+- Green environment has its own database
+- Regular sync from blue database
+- Use clustered database options for better sync
+
+e.g:
+Blue Environment:
+- ALB-Blue -> App-Blue -> RDS Primary (Read/Write)
+Green Environment (Testing Phase):
+- ALB-Green -> App-Green -> RDS Read Replica (Read Only)
+Cutover:
+- Promote RDS Read Replica to standalone RDS Primary
+- Switch DNS to ALB-Green
+- Blue DB becomes standby
+
+Note: This still has a brief window where writes can be lost during promotion.
+
+Option 2: Shared Database (Recommended)
+- Both environments use the same database
+- Ensure database changes are backward-compatible
+- Plan for easy rollback of database changes
+- Prevent test operations from affecting production data
+
+Canary Deployment Strategy
+Scenario: Fixed 20 EC2 Instances (No Auto-Scaling)
+Infrastructure Setup:
+
+20 EC2 instances running behind an Application Load Balancer (ALB)
+All instances serving live production traffic
+Instance count is fixed (cannot scale up or down)
+
+--------------------------
+Canary Deployment Process
+--------------------------
+
+Defining the Canary Strategy:
+Progressive Rollout Plan for an Infrastructure with 20 servers:
+- 5% -> Release to 1 server (1 out of 20)
+- 20% -> Release to 4 servers (4 out of 20)
+- 50% -> Release to 10 servers (10 out of 20)
+- 100% -> Release to all 20 servers
+
+Step-by-Step Deployment
+
+Phase 1: 5% Canary Release (1 Server)
+
+Process:
+- Pick 1 server from the pool
+- Apply the latest version
+
+Traffic Distribution:
+- 1 server with version 1.2 (new)
+- 19 servers with version 1.1 (old)
+- ALB distributes traffic evenly: ~5% of requests go to the new version
+
+Monitoring:
+- Watch error rates, latency, and business metrics
+- Monitor logs from the canary server
+- If issues detected -> immediate rollback
+
+
+Phase 2: 20% Canary Release (4 Servers)
+- If Phase 1 is successful
+- Perform same steps for 3 additional servers (total 4 servers now)
+
+Phase 3: 50% Canary Release (10 Servers)
+- If Phase 2 is successful
+- Perform same steps in 6 additional servers (total 10 servers now)
+
+Phase 4: 100% Full Rollout (All 20 Servers)
+- If Phase 3 is successful
+- Update remaining 10 servers
+- All 20 servers now running version 1.2
+- Deployment complete
+
+Rollback Strategy
+- Scenario: Issues Found After 20% Release
+- Problem Detected:
+    After deploying to 4 servers (20% canary), you notice errors or performance issues
+- Need to rollback immediately
+
+Rollback Process:
+- Move the 4 servers to the old version
+- All 20 servers now running version 1.1 (old version)
+- 100% of traffic on stable version
+
+Canary deployment in kubernetes can be achieved by
+- argo rollouts
+- istio or linkerd
