@@ -1,0 +1,176 @@
+------------------------------------------------------------------------
+Disaster Recovery (DR) Solution for Mission-Critical Banking Application
+------------------------------------------------------------------------
+
+Problem Statement:
+------------------
+- Plan a DR solution for a mission-critical banking application
+
+CURRENT Setup
+-------------
+
+- PRIMARY REGION: MUMBAI
+
+Application Infrastructure:
+1 Application Load Balancer (ALB)
+1 EKS Cluster with 5 worker nodes
+1 RDS Database in High Availability (HA) mode (Multi-AZ)
+1 S3 Bucket for storing static objects
+
+Global Infrastructure:
+1 CloudFront Distribution pointing to Mumbai ALB
+1 Route53 Public Hosted Zone
+1 A Record pointing to CloudFront URL
+
+Application Type: Mission-critical banking application
+
+----------------
+
+Solution:
+---------
+
+
+Probable DR Setup
+------------------
+
+- SECONDARY REGION: HYDERABAD
+
+Compliance Requirement:
+Data Residency: Banking data must remain within India
+Mumbai and Hyderabad both are Indian regions
+Meets regulatory compliance requirements
+
+DR Region Setup - Application Infrastructure (Mirror of Mumbai):
+1 Application Load Balancer (ALB)
+1 EKS Cluster with 5 worker nodes
+1 RDS Database in High Availability (HA) mode (Multi-AZ)
+1 S3 Bucket for storing static objects
+
+DR Region Setup - Global Infrastructure Updates:
+1 CloudFront Distribution pointing to Hyderabad ALB
+Route53 Failover Routing Policy
+
+----------------
+
+DR STRATEGIES
+--------------
+
+Option 1: Active-Passive (Pilot Light/Warm Standby)
+    Mumbai (Primary): Running 24/7, serves all traffic
+    Hyderabad (DR): Infrastructure ready, application running but NOT serving traffic
+    RTO (Recovery Time Objective): 5-15 minutes
+    RPO (Recovery Point Objective): Depends on backup frequency
+    Cost: Lower (DR region minimal resources)
+
+Option 2: Active-Active (Multi-Region Active)
+    Mumbai: Running 24/7, serves 50% traffic
+    Hyderabad: Running 24/7, serves 50% traffic
+    RTO: Near zero (instant failover)
+    RPO: Near zero (real-time replication)
+    Cost: Higher (full resources in both regions)
+
+Verdict:
+    For user-facing or payment-related banking applications, Active-Active is preferred for critical systems due to near-zero downtime requirements.
+
+----------------
+
+APPLICATION SYNCHRONIZATION STRATEGY
+------------------------------------
+
+How to Sync Application Changes Between Regions?
+
+CI/CD Pipeline Process:
+    Deploy to Primary Region first (Mumbai EKS)
+    Monitor and validate the deployment
+    Deploy to DR Region (Hyderabad EKS) with the same Docker image tag
+    Ensure version consistency across both regions
+
+### Note on AWS native Disaster Recovery Service Services:
+
+For EC2-Based Deployments:
+AWS Elastic Disaster Recovery (AWS DRS) can be used
+AWS DRS provides continuous block-level replication
+Not applicable here since we're using EKS, not EC2 instances directly
+
+For EKS Setup:
+Use container image replication across regions
+Store Docker images in Amazon ECR with cross-region replication enabled
+
+----------------
+
+DATABASE SYNCHRONIZATION STRATEGIES
+-----------------------------------
+
+Option 1: AWS Aurora Global Database (Recommended for Active-Active)
+
+    Setup:
+    Aurora MySQL/PostgreSQL
+    Primary Cluster (Mumbai): Read/Write
+    Secondary Cluster (Hyderabad): Read Only (can be promoted to Read/Write)
+
+    Replication Lag: < 1 second
+    RPO: < 1 second
+    RTO: < 1 minute (promotion time)
+
+    Failover Process:
+    Detect primary region failure
+    Promote Hyderabad Aurora cluster to primary (write-enabled)
+    Update Route53 to point to Hyderabad
+    Applications continue with minimal disruption
+
+
+Option 2: Enterprise Database Native Replication
+
+    For Oracle/MSSQL Server:
+    Oracle Data Guard
+    SQL Server Always On Availability Groups
+    Configure cross-region replication
+    Automatic or manual failover
+
+
+Option 3: AWS DynamoDB Global Tables
+
+    For NoSQL Workloads:
+    Multi-region, multi-active database
+    Automatic replication across regions
+    Eventual consistency model
+    Perfect for Active-Active DR strategy
+
+    DynamoDB Global Table:
+    Mumbai Region: Read/Write
+    Hyderabad Region: Read/Write
+
+    Conflict Resolution: Last Writer Wins
+    Replication Lag: < 1 second
+
+Option 4: Snapshot-Based Replication (Active-Passive)
+
+    For Traditional RDS (MySQL/PostgreSQL/MSSQL):
+    Process:
+    Automated Backups in Mumbai region (every 15 minutes)
+    Copy snapshots to Hyderabad region (cross-region backup)
+    Store snapshot metadata in S3 or DynamoDB
+    Lambda function monitors primary region health
+    On failure: Lambda creates DB from latest snapshot in DR region
+
+    Limitations:
+        RPO: 15 minutes (last backup interval - potential data loss)
+        RTO: 10-20 minutes (time to restore from snapshot)
+
+----------------
+
+S3 BUCKET REPLICATION
+---------------------
+
+Cross-Region Replication (CRR) Setup:
+S3 Bucket (Mumbai) replicates to S3 Bucket (Hyderabad)
+Replication: Automatic and real-time
+Objects: All new objects replicated
+Encryption: Supported
+Versioning: Required on both buckets
+
+Configuration Steps:
+Enable versioning on both buckets
+Create replication rule in Mumbai bucket
+Specify Hyderabad bucket as destination
+Choose replication options (all objects, encryption, etc.)

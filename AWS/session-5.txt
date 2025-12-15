@@ -1,0 +1,174 @@
+---------------------------
+AWS Training Program
+---------------------------
+
+-----------
+Session 5:
+-----------
+
+Problem Statement:
+User needs access to 4 AWS accounts out of 10 total accounts with following requirements:
+- Admin level access: Dev and QA accounts
+- Read-only access: UAT and Prod accounts
+
+How will you provide this access?
+
+OPTION 1: CREATE IAM USER IN EACH ACCOUNT (NOT RECOMMENDED)
+
+    Approach:
+    - Create the same IAM user in all 4 accounts
+    - Attach appropriate policies in each account
+
+    Example:
+    Dev Account: Create user "john@company.com" with AdministratorAccess policy
+    QA Account: Create user "john@company.com" with AdministratorAccess policy
+    UAT Account: Create user "john@company.com" with ReadOnlyAccess policy
+    Prod Account: Create user "john@company.com" with ReadOnlyAccess policy
+
+    Problems with This Approach:
+    Password/credential management across multiple accounts
+    Different credentials for each account
+    Security risk: Multiple access keys to manage
+
+    Verdict: NOT RECOMMENDED for multi-account environments
+
+OPTION 2: CROSS-ACCOUNT IAM ROLE ACCESS (RECOMMENDED FOR SMALL TEAMS)
+
+    Approach:
+    Create IAM user in one AWS account preferably in the central Management Account and leverage cross-account IAM roles in the target AWS accounts.
+
+    Architecture:
+    - Central Management Account: Where users are created
+    - Target Accounts: Dev, QA, UAT, Prod (use IAM roles for access)
+
+    Setup Process:
+    Step 1: Create IAM User in Management Account
+    - Username: abc@hvd.com
+    - Policy: PowerUserAccess (or appropriate policy for management account)
+    - AWS Account: Management Account
+
+
+    Step 2: Create IAM Roles in Target Accounts
+
+    Sample Trust Policy for the Role:
+
+    Create Role -> Trusted Entity: AWS Account
+
+    Trust policy:
+
+    {
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+        "Effect": "Allow",
+        "Principal": {
+            "AWS": "arn:aws:iam::<MANAGEMENT_Account_ID>:root"
+        },
+        "Action": "sts:AssumeRole"
+        }
+    ]
+    }
+
+
+    In Dev Account:
+    - Role Name: DevAdminRole
+    - Trust Policy: Allow Management Account to assume this role
+    - Permissions: AdministratorAccess policy
+
+    In QA Account:
+    - Role Name: QAAdminRole
+    - Trust Policy: Allow Management Account to assume this role
+    - Permissions: AdministratorAccess policy
+
+    In UAT Account:
+    - Role Name: UATReadOnlyRole
+    - Trust Policy: Allow Management Account to assume this role
+    - Permissions: ReadOnlyAccess policy
+
+    In Prod Account:
+    - Role Name: ProdReadOnlyRole
+    - Trust Policy: Allow Management Account to assume this role
+    - Permissions: ReadOnlyAccess policy
+
+    Step 3: Grant User Permission to Assume Roles
+
+    In Management Account, attach policy to user abc@hvd.com:
+    Policy Name: AssumeRolePolicy
+    Policy Content:
+    {
+    "Version": "2012-10-17",
+    "Statement": [
+    {
+    "Effect": "Allow",
+    "Action": "sts:AssumeRole",
+    "Resource": [
+    "arn:aws:iam::111111111111:role/DevAdminRole",
+    "arn:aws:iam::222222222222:role/QAAdminRole",
+    "arn:aws:iam::333333333333:role/UATReadOnlyRole",
+    "arn:aws:iam::444444444444:role/ProdReadOnlyRole"
+    ]
+    }
+    ]
+    }
+
+    How It Works:
+
+    User logs into Management Account with username: abc@hvd.com
+    From AWS Console, user clicks "Switch Role"
+    User enters target account ID and role name
+    User is switched to target account with role permissions
+    User can access resources based on role permissions
+
+
+OPTION 3: AWS IAM IDENTITY CENTER (SSO) - RECOMMENDED FOR ENTERPRISES
+
+Approach:
+Link AWS Organization to corporate Identity Provider (e.g., Windows Active Directory, Okta, Azure AD)
+Users do not need separate AWS credentials
+
+Architecture:
+Corporate Identity Provider: Windows AD / Azure AD / Okta
+AWS IAM Identity Center: Manages SSO access
+Target Accounts: All AWS accounts in organization
+Permission Sets: Define access levels (Admin, ReadOnly, etc.)
+
+Setup Process:
+
+Step 1: Enable IAM Identity Center
+Enable in AWS Organizations Management Account
+Choose identity source: AWS Managed Directory or External IdP (Active Directory)
+
+Step 2: Sync Users from Identity Provider
+Users are synced from Windows AD to AWS IAM Identity Center
+No need to create users manually in AWS
+Example: User "abc@hvd.com" exists in Windows AD
+
+Step 3: Create Permission Sets (Reusable Access Templates)
+
+Permission Set 1: AdminAccess
+Policies: AdministratorAccess
+
+Permission Set 2: ReadOnlyAccess
+Policies: ViewOnlyAccess
+
+Step 4: Assign Users to Accounts with Permission Sets
+
+Assignment 1:
+User: abc@hvd.com
+Accounts: Dev, QA
+Permission Set: AdminAccess
+
+Assignment 2:
+User: abc@hvd.com
+Accounts: UAT, Prod
+Permission Set: ReadOnlyAccess
+
+How It Works:
+User navigates to AWS SSO portal: something like: https://d-1234567890.awsapps.com/start
+User logs in with corporate credentials (Windows AD username/password)
+User sees a dashboard with all accessible AWS accounts
+User clicks on desired account (e.g., Dev account)
+User is logged into Dev account with Admin access
+User can switch between accounts seamlessly
+
+--------
